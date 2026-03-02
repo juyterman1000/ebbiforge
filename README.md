@@ -19,19 +19,19 @@
   [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
   [![Rust](https://img.shields.io/badge/rust-1.75+-orange.svg)](https://www.rust-lang.org/)
   [![Next.js](https://img.shields.io/badge/next.js-15-black.svg)](https://nextjs.org/)
-
-  <br/><br/>
-
-  **If these organisms feel more alive than your dashboard, give us a star.**
-
-  <a href="https://github.com/juyterman1000/openrustswarm/stargazers">
-    <img src="https://img.shields.io/github/stars/juyterman1000/openrustswarm?style=social&label=Star" alt="GitHub Stars">
-  </a>
 </div>
 
 <p align="center">
   <img src="demo/hero_banner.png" alt="OpenRustSwarm — BTC, ETH, SOL organism clusters reacting to live market data" width="800">
 </p>
+
+<div align="center">
+  <h3>Feed the Swarm. Join the Evolution.</h3>
+  <p>We are building the first open-source nervous system for AI agents. Every star helps this project reach the engineers needed to build a truly biological subconscious for the web.</p>
+  <a href="https://github.com/juyterman1000/openrustswarm/stargazers">
+    <img src="https://img.shields.io/badge/⭐-Star%20this%20Repo-gold?style=for-the-badge&logo=github" alt="Star this Repo">
+  </a>
+</div>
 
 ---
 
