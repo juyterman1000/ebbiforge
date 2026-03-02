@@ -1,0 +1,32 @@
+name: 💡 Feature Request
+description: Suggest an idea for the swarm
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: What's missing or could be better?
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: How would you approach this?
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Visualization (colors, animations, UI)
+        - Biology (new genes, pheromones, evolution)
+        - Data (new feeds, signal processing)
+        - Narration (voice, personality, triggers)
+        - Performance (scale, memory, throughput)
+        - Integration (OpenClaw, webhooks, APIs)
+    validations:
+      required: true

@@ -68,6 +68,7 @@ test_*.py
 medieval_demo.py
 real_10k_log_swarm.py
 CODEBASE_AUDIT.md
+LAUNCH.md
 *.jsonl
 server/diagnose_api.py
 server/verify_ui.py

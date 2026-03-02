@@ -6,6 +6,7 @@
   <p>A living swarm intelligence — built in Rust, visualized in WebAssembly, narrated by Gemini.<br/>
   It doesn't chart prices. It <em>reacts</em> to them. Biologically.</p>
 
+  [![CI](https://github.com/juyterman1000/openrustswarm/actions/workflows/ci.yml/badge.svg)](https://github.com/juyterman1000/openrustswarm/actions)
   [![License: ISC](https://img.shields.io/badge/License-ISC-blue.svg)](https://opensource.org/licenses/ISC)
   [![Rust](https://img.shields.io/badge/rust-1.75+-orange.svg)](https://www.rust-lang.org/)
   [![Next.js](https://img.shields.io/badge/next.js-15-black.svg)](https://nextjs.org/)

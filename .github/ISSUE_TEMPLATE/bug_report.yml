@@ -1,0 +1,46 @@
+name: 🐛 Bug Report
+description: Something isn't working
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for reporting! The swarm appreciates your vigilance.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you expect vs what actually happened?
+      placeholder: "When I click on the swarm canvas, organisms don't react..."
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: How can we reproduce this?
+      value: |
+        1. Run `npm run dev` in `web/`
+        2. Navigate to localhost:3000
+        3. ...
+    validations:
+      required: true
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      options:
+        - Web Dashboard
+        - Rust Engine
+        - WASM Bridge
+        - API Routes
+        - Narration/Gemini
+        - Data Feeds
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, browser, Node version, Rust version
+      placeholder: "Ubuntu 24.04, Chrome 120, Node 22, Rust 1.75"

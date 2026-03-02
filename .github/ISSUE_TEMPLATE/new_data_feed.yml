@@ -1,0 +1,36 @@
+name: 🧬 New Data Feed
+description: Suggest a new real-world data source for the swarm to ingest
+title: "[Feed]: "
+labels: ["enhancement", "good first issue", "data-feed"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The swarm ingests real-world data as sensory input. Each new feed adds a new dimension of awareness.
+        Current feeds: BTC, ETH, SOL (CoinGecko), GitHub Events.
+  - type: input
+    id: data-source
+    attributes:
+      label: Data source
+      description: What API or data stream?
+      placeholder: "USGS Earthquake API, Fear & Greed Index, Twitch chat velocity..."
+    validations:
+      required: true
+  - type: textarea
+    id: organism-reaction
+    attributes:
+      label: How should organisms react?
+      description: What would this data look like as a biological response?
+      placeholder: "Earthquake magnitude 5+ creates a shockwave from the bottom of the swarm field..."
+    validations:
+      required: true
+  - type: dropdown
+    id: difficulty
+    attributes:
+      label: Estimated difficulty
+      options:
+        - 🟢 Easy (< 50 lines, API call + signal mapping)
+        - 🟡 Medium (new component + integration)
+        - 🔴 Hard (new Rust subsystem needed)
+    validations:
+      required: true
