@@ -1,169 +1,201 @@
 <div align="center">
-  <img src="logo.svg" alt="OpenRustSwarm Logo" width="280">
+  <img src="logo.svg" alt="OpenRustSwarm" width="280">
 
-  ### The high-performance runtime for planetary-scale agent societies.
+  <h3>50,000 organisms that feel the crypto market before you do.</h3>
+
+  <p>A living swarm intelligence — built in Rust, visualized in WebAssembly, narrated by Gemini.<br/>
+  It doesn't chart prices. It <em>reacts</em> to them. Biologically.</p>
 
   [![License: ISC](https://img.shields.io/badge/License-ISC-blue.svg)](https://opensource.org/licenses/ISC)
-  [![Python 3.13](https://img.shields.io/badge/python-3.13+-blue.svg)](https://www.python.org/downloads/release/python-3130/)
-  [![Platform: Linux x86_64](https://img.shields.io/badge/platform-linux--x86__64-lightgrey.svg)](https://github.com/juyterman1000/openrustswarm)
+  [![Rust](https://img.shields.io/badge/rust-1.75+-orange.svg)](https://www.rust-lang.org/)
+  [![Next.js](https://img.shields.io/badge/next.js-15-black.svg)](https://nextjs.org/)
   [![Scale: 10M Agents](https://img.shields.io/badge/scale-10M%20agents-green.svg)](https://github.com/juyterman1000/openrustswarm)
 </div>
 
-<p align="center">
-  <img src="demo/demo_preview.png" alt="OpenRustSwarm Simulation — 10M Agent Architecture in action" width="800">
-</p>
-
 ---
 
-OpenRustSwarm is an enterprise-grade, lightweight **multi-agent orchestration framework** and **AI agent runtime** built in Rust. It is designed to coordinate massive-scale agent swarms with minimal overhead, solving the performance bottlenecks found in traditional agentic frameworks.
+## What is this?
 
-### Why OpenRustSwarm?
-- **Massive Scale**: Coordinate 10,000,000+ agents on a single workstation.
-- **Zero LLM Cost**: Driven by high-fidelity mathematical and physical models, not expensive LLM loops.
-- **Microsecond Latency**: Pure Rust SoA (Struct-of-Arrays) engine for sub-millisecond per-agent ticks.
-- **Hard Proof**: Comes with a reproducibility suite to verify all performance claims locally.
+OpenRustSwarm is a biological simulation where **thousands of autonomous organisms** process real-world data as sensory input. Each organism has:
 
-## Comparison: The New Standard
+- 🧬 **6 heritable genes** — transfer rate, recovery rate, infection radius, broadcast power, sensitivity, mutation rate
+- 🦠 **SIRS epidemiology** — organisms infect each other with "surprise" when anomalies hit
+- 🧠 **Ebbinghaus memory decay** — they remember shocking events, forget routine ones
+- ⚡ **Spatial hash grid** — O(1) neighbor lookups, real physics, not random
+- 🧪 **Darwinian evolution** — natural selection, crossover, mutation every generation
+- 🌫️ **6-channel pheromone field** — danger, trail, food, novelty, alarm, reward
 
-| Feature | OpenRustSwarm | Traditional Frameworks (Legacy/Standard) |
-| :--- | :--- | :--- |
-| **Max Scale** | **10,000,000+** Agents | ~100 Agents (Latency/Cost Bound) |
-| **Latency** | **<0.1ms** (Native Rust) | >2,000ms (LLM Blocking) |
-| **Per-Tick Cost** | **$0.00** | ~$0.15 (Token Usage) |
-| **Architecture** | SoA / Data-Oriented | Object-Oriented (Memory Heavy) |
-| **Deployment** | Single Linux Binary | Cloud Cluster / Distributed |
+When Bitcoin drops 3%, you don't read a number — you **see the organisms die**. The survivors evolve. R₀ climbs. The swarm fights back.
 
----
+### The one question that matters:
 
-## Technical Performance Analysis
+> *When something real happens — BTC drops 3%, a DeFi repo spikes — can you see it in the organisms before you read the number?*
 
-Most agentic frameworks suffer from state explosion and high latency when scaling beyond a few dozen entities. OpenRustSwarm solves this via a 4-Tier Level-of-Detail (LOD) architecture and a Struct-of-Arrays (SoA) engine.
-
-The following benchmarks demonstrate OpenRustSwarm’s resilience against common failure modes in distributed agent systems.
-
-### 1. Generalization vs. Exact Matching
-**Challenge**: Can the system detect security threats that use padding or noise to evade detection?
-
-Conventional systems relying on exact hashmap matching fail when an attacker injects noise (e.g., `[Auth, Delay, SelectUser, Ping, DropTable]`). OpenRustSwarm’s Predictive Safety Shield uses biologically-inspired Longest Common Subsequence (LCS) matching to identify the underlying risk structure regardless of noise.
-
-*   **Naive Set Result**: ALLOWED (Critical False Negative)
-*   **OpenRustSwarm LCS Result**: BLOCKED (Risk: 0.87, Threshold: 0.6)
-
-### 2. Autonomous Learning (The Groundhog Day Test)
-**Challenge**: Does the system learn from failure patterns in real-time?
-
-OpenRustSwarm agents register failure patterns into a shared memory pool. In our tests, witnessing a single failure event enabled the swarm to block 100% of subsequent similar attempts with zero false positives.
-
-### 3. Reinforcement Learning Divergence
-**Challenge**: Is behavioral change driven by actual environmental feedback?
-
-We measure the delta between rewarded and punished agents using Temporal Difference (TD) learning.
-*   **Initial State**: Balanced (0.5/0.5 reward propensity)
-*   **Result (10 Rounds)**: Punished agents decayed to 0.16; Rewarded agents dilated to 0.83.
-*   **Verification**: The 0.67 gap confirms genuine behavior mutation, not just moving average smoothing.
-
-### 4. Distributed State Resilience
-**Challenge**: Can the runtime survive a 30% concurrent agent loss?
-
-By utilizing Tokio's async runtime and zero-copy memory mutexes, OpenRustSwarm maintains state integrity even when a large portion of the swarm is terminated mid-flight. Our tests confirm a 100% recovery rate with zero memory corruption anomalies.
-
-### 5. Biological Memory Decay
-**Challenge**: Does the system prioritize critical information over routine data?
-
-Implemented via the Ebbinghaus forgetting curve in native Rust, OpenRustSwarm retains "surprise" events (anomalies) significantly longer than routine background data.
-*   **Retention Ratio**: 70,583x (Trauma vs. Routine)
-
-### 6. Emergent Behavioral Castes
-**Challenge**: Do hierarchical roles emerge from environmental pressure?
-
-Without explicit scripting, identical OpenRustSwarm agents naturally split into specialized phenotypes (Brokers, Hoarders, Neutrals) after interacting with the environment, proven by a 0.92 spread in sharing propensities.
-
-### 7. Scalable Signal Propagation
-**Challenge**: Can you coordinate 10 million agents without O(N) broadcasting?
-
-OpenRustSwarm utilizes a spatial signal wavefront. Information propagates geometrically across a grid, reaching >65% of a 10M agent swarm within 30 ticks without a single global broadcast.
-
-### 8. Hard Scale Proof (10M Agents)
-**Challenge**: Benchmarking absolute limits on consumer hardware.
-
-*   **Total Population**: 10,000,000 Agents
-*   **Memory Footprint**: 3.71 GB
-*   **Throughput**: 20.5 Million agent-updates/sec
+**Yes. That's the point.**
 
 ---
 
 ## Quick Start
 
-### 1. Engine Deployment (Binary-Only Alpha)
-
-OpenRustSwarm is distributed as **Architecturally Hardened Performance Cores** to ensure maximum execution speed and system integrity. By utilizing pre-compiled binaries, we eliminate the overhead of local compilation and prevent architectural drift.
-
 ```bash
-pip install openrustswarm_core.so
+# Clone
+git clone https://github.com/juyterman1000/openrustswarm.git
+cd openrustswarm
+
+# Start the dashboard
+cd web
+npm install
+npm run dev
+# → http://localhost:3000
 ```
 
-*Required: Python 3.13 on Linux x86_64.*
+You need a `GEMINI_API_KEY` in `web/.env.local` for the narration voice:
 
-### 2. Local Verification
-Run the official verification suite to reproduce our technical benchmarks on your own infrastructure:
-
-```bash
-python verify_all_benchmarks.py
+```env
+GEMINI_API_KEY=your_key_here
 ```
 
-### 3. Usage Example
-
-```python
-import openrustswarm_core as swarm
-
-# Initialize 1,000 agents with zero-copy state
-swarm_engine = swarm.ProductionTensorSwarm(agent_count=1000)
-
-# Simulate 100 high-fidelity ticks
-for _ in range(100):
-    swarm.tick()
-
-# Extract swarm health metrics
-metrics = swarm.sample_population_metrics()
-print(f"Mean Health: {metrics.get('mean_health'):.4f}")
-```
+Without it, the swarm still runs — it just can't speak.
 
 ---
 
-## Use Cases
+## Architecture
 
-*   **Distributed Logistics**: Rerouting 10M vehicles in real-time during network disruptions.
-*   **Risk Simulation**: Discovery of adversarial trading strategies in sub-second environments.
-*   **Social Dynamics**: Emergent hierarchy modeling for game AI and sociology research.
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    LAYER 5: THE FACE                        │
+│   Next.js dashboard, WebGL/Canvas2D, crypto ticker,         │
+│   R₀ tension overlay (red pulse when R₀ > 1.2)             │
+├─────────────────────────────────────────────────────────────┤
+│                    LAYER 4: MEMORY                          │
+│   Ebbinghaus decay, metacognition, curiosity module         │
+├─────────────────────────────────────────────────────────────┤
+│                    LAYER 3: THE HANDS                       │
+│   OpenClaw skill, webhook alerts, signal injection API      │
+├─────────────────────────────────────────────────────────────┤
+│                    LAYER 2: THE VOICE                       │
+│   Gemini 2.5 Flash narration — speaks as the organism       │
+│   "847 organisms near the BTC cluster just died."           │
+├─────────────────────────────────────────────────────────────┤
+│                    LAYER 1: NERVOUS SYSTEM                  │
+│   100+ Rust source files, WASM bridge, 10M agent engine     │
+│   SIRS, evolution, pheromones, spatial hash, safety shield   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+## Real Data Feeds
+
+The swarm ingests live data every 15 seconds:
+
+| Feed | Source | What organisms feel |
+|------|--------|-------------------|
+| **BTC** | CoinGecko | Shockwave in left swarm region |
+| **ETH** | CoinGecko | Shockwave in center region |
+| **SOL** | CoinGecko | Shockwave in right region |
+| **GitHub** | Events API | Activity pulse in center |
+
+Each asset has its own organism cluster. Inter-poll price deltas (not 24h averages) drive reactions — a $200 BTC move in 15 seconds creates visible cascading shockwaves.
 
 ---
 
-## Roadmap
+## Performance
 
-- [x] **v3.0.0**: 10M agent runtime — 8/8 benchmarks passed
-- [x] **v3.1.0**: 100M agent scale — spatial partitioning & memory-mapped state (Current)
-- [ ] **v3.2.0**: Real-time swarm visualization via WebAssembly
-- [ ] **v4.0.0**: Self-evolving agent genomes — zero-human-intervention adaptation
+| Metric | Value |
+|--------|-------|
+| Max agents | **10,000,000** |
+| Per-tick cost | **$0.00** (no LLM in the loop) |
+| Memory @ 10M | **3.71 GB** |
+| Throughput | **20.5M agent-updates/sec** |
+| Latency | **< 0.1ms** per tick |
+| Architecture | Struct-of-Arrays (cache-friendly) |
+
+Benchmarks are reproducible on consumer hardware. No cloud required.
+
+---
+
+## Project Structure
+
+```
+openrustswarm/
+├── openrustswarm-core/    # Rust engine — 100+ source files
+│   └── src/
+│       ├── swarm/         # SIRS, spatial hash, tensor engine, LOD, mmap
+│       ├── evolution/     # Population genetics, sandbox, synthesizer
+│       ├── worldmodel/    # Pheromone diffusion, memory consolidation
+│       ├── compliance/    # Safety shield, audit trails
+│       └── core/          # Workflow, graph orchestration
+├── cogops-wasm/           # WASM bridge for browser rendering
+├── web/                   # Next.js dashboard
+│   ├── app/api/           # 9 API routes (feeds, narration, OpenClaw)
+│   ├── hooks/             # useWasmEngine, useNarration, useRealDataFeed
+│   ├── components/swarm/  # AgentCanvas, R0Indicator, NarrationPanel
+│   └── lib/               # WebGL renderer, color maps, ring buffers
+├── cogops-skill/          # OpenClaw integration skill
+├── server/                # Python server + swarm brain
+├── demo/                  # Demo server
+└── examples/              # Python usage examples
+```
 
 ---
 
 ## Contributing
 
-We welcome contributions to the high-performance agent runtime. Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+We want contributors. Here's how:
 
-If you find this project useful, please consider giving us a star on GitHub.
+### Good First Issues
+
+- **Add a new data feed** — plug in any API (DeFi TVL, earthquake data, social media sentiment) as a new sensory input. See `web/app/api/feeds/` for the pattern.
+- **New color mode** — the swarm supports custom color maps. Add one in `web/lib/color-maps.ts`.
+- **Narration personality** — swap the narrator's voice in `web/app/api/swarm/narrate/route.ts`. Make it a war correspondent, a poet, or a sports commentator.
+
+### Bigger Projects
+
+- **Sound design** — R₀ > 1.0 should SOUND tense. Add WebAudio.
+- **Mobile dashboard** — responsive layout for the swarm viewer.
+- **New organism subsystems** — add a 7th pheromone channel, a new gene, or a new evolutionary pressure.
+- **More data feeds** — stock indices, weather, earthquake data, Twitch chat velocity.
+
+### How to Contribute
+
+1. Fork the repo
+2. Create a feature branch (`git checkout -b feat/earthquake-feed`)
+3. Make your changes
+4. Run `npx next build` in `web/` to verify
+5. Open a PR
+
+---
+
+## API Routes
+
+| Route | Method | Purpose |
+|-------|--------|---------|
+| `/api/swarm` | GET | Live swarm metrics |
+| `/api/swarm/narrate` | POST | Gemini narration |
+| `/api/feeds/crypto` | GET | BTC/ETH/SOL prices |
+| `/api/feeds/github` | GET | GitHub activity |
+| `/api/openclaw/push` | POST | Forward alerts to OpenClaw |
+| `/api/openclaw/inject` | POST/GET | Inject signals into swarm |
+
+---
+
+## The 5 Layers
+
+| Layer | Name | Status |
+|-------|------|--------|
+| 1 | **Nervous System** — Rust engine, SIRS, evolution, pheromones | ✅ Live |
+| 2 | **The Voice** — Gemini narrates as the organism | ✅ Live |
+| 3 | **The Hands** — OpenClaw integration for autonomous actions | ✅ Built |
+| 4 | **Memory** — Ebbinghaus decay, metacognition | ✅ Active |
+| 5 | **The Face** — Dashboard, crypto ticker, R₀ tension overlay | ✅ Live |
 
 ---
 
 ## License
 
-**REPRODUCTION & TESTING ONLY**
+[ISC License](LICENSE) — use it, fork it, build on it.
 
-This software is provided for evaluation purposes. Commercial use, modification, redistribution, or reverse engineering is strictly prohibited. See [LICENSE](LICENSE) for details.
-
-Contact: [fastrunner10090@gmail.com](mailto:fastrunner10090@gmail.com)
+---
 
 <div align="center">
-  <sub>© 2024–2026 OpenRustSwarm. Architectural Integrity First.</sub>
+  <sub>Built with Rust, WebAssembly, and the belief that organisms are better than dashboards.</sub>
 </div>
- 
