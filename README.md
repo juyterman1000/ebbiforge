@@ -1,19 +1,9 @@
 <div align="center">
   <img src="logo.svg" alt="OpenRustSwarm" width="280">
 
-  <h3>10 million organisms that react to the crypto market before you read the number.</h3>
+  <h3>OpenRustSwarm</h3>
 
-  <p>A living swarm intelligence — built in Rust, visualized in WebAssembly, narrated by Gemini.</p>
-
-  <a href="https://github.com/juyterman1000/openrustswarm/stargazers">
-    <img src="https://img.shields.io/github/stars/juyterman1000/openrustswarm?style=social" alt="GitHub Stars">
-  </a>
-  &nbsp;
-  <a href="https://github.com/juyterman1000/openrustswarm/fork">
-    <img src="https://img.shields.io/github/forks/juyterman1000/openrustswarm?style=social" alt="GitHub Forks">
-  </a>
-
-  <br/><br/>
+  <p>A high-performance research substrate for large-scale agent simulations.</p>
 
   [![CI](https://github.com/juyterman1000/openrustswarm/actions/workflows/ci.yml/badge.svg)](https://github.com/juyterman1000/openrustswarm/actions)
   [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -25,108 +15,58 @@
   <img src="demo/hero_banner.png" alt="OpenRustSwarm — BTC, ETH, SOL organism clusters reacting to live market data" width="800">
 </p>
 
-<div align="center">
-  <h3>Feed the Swarm. Join the Evolution.</h3>
-  <p>We are building the first open-source nervous system for AI agents. Every star helps this project reach the engineers needed to build a truly biological subconscious for the web.</p>
-  <a href="https://github.com/juyterman1000/openrustswarm/stargazers">
-    <img src="https://img.shields.io/badge/⭐-Star%20this%20Repo-gold?style=for-the-badge&logo=github" alt="Star this Repo">
-  </a>
-</div>
-
 ---
 
-## What is this?
+## The Problem: Scaling Complexity in Agent Simulations
 
-OpenRustSwarm is a biological simulation where autonomous organisms process real-world data as sensory input. It doesn't chart prices — it reacts to them. Biologically.
+Most agent-based simulations struggle with the $O(N^2)$ neighbor lookup problem and high memory overhead per agent. When scaling to millions of entities, traditional object-oriented patterns or even standard Entity-Component-System (ECS) approaches often hit wall-clock or memory limits on consumer hardware.
 
-Instead of traditional dashboards, the swarm uses SIRS epidemiology and Darwinian evolution to manifest market volatility as physical pressure. When Bitcoin drops, organisms in the BTC cluster die. Survivors evolve higher sensitivity. The reproduction number (R0) climbs. The canvas pulses red.
+OpenRustSwarm is a research project exploring how to use **Level of Detail (LOD)** strategies—common in 3D rendering but less so in agent logic—to simulate up to 10,000,000 agents on a single workstation.
 
-This is the "Nervous System" foundation for [CogOps](https://github.com/juyterman1000/cogops) and [OpenClaw](https://github.com/openclaw/openclaw), providing massive-scale sensory awareness for autonomous AI agents.
+## Technical Strategy: 4-Tier LOD Architecture
 
----
-
-## Hard Proof: 10M Agent Scale
-
-We don't mock scale. We manage it using a 4-tier Level of Detail (LOD) architecture.
-
-### The 4-Tier Compute Stack
+We categorize agents by their "Criticality" and "Surprise Score" to determine how much compute resource they consume.
 
 ```mermaid
 graph TD
-    T1[Tier 1: Dormant - 9.0M Agents] -->|Trigger| T2
-    T2[Tier 2: Simplified - 0.8M Agents] -->|Anomalies| T3
-    T3[Tier 3: Full Tensor - 0.2M Agents] -->|Criticality| T4
+    T1[Tier 1: Dormant - 9.0M Agents] -->|State Trigger| T2
+    T2[Tier 2: Simplified - 0.8M Agents] -->|Anomaly Detection| T3
+    T3[Tier 3: Full Tensor - 0.2M Agents] -->|Critical Threshold| T4
     T4[Tier 4: Heavy - 10-100 Agents]
 
-    subgraph "Nervous System (Rust/WASM)"
-    T1 -.->|0.01ms CPU| T1
-    T2 -.->|SIMD Physics| T2
-    T3 -.->|Tensor Engine| T3
+    subgraph "Nervous System (Rust Engine)"
+    T1 -.->|Packed Bitfields / mmap| T1
+    T2 -.->|SIMD-Optimized Physics| T2
+    T3 -.->|Tensor-Based Decision Logic| T3
     end
 
-    subgraph "Conscious Action (LLM)"
-    T4 -.->|Gemini/OpenClaw| T4
+    subgraph "Conscious Action (Optional Integration)"
+    T4 -.->|LLM-Narrated / OpenClaw| T4
     end
 ```
 
-### Benchmark Evidence
-`python3 test_10m_scale.py`
-```text
-INITIALIZING SMART SCALE TEST: 10,000,000 TOTAL AGENTS
-   [LOD Configuration: 1,000,000 Active + 9,000,000 Dormant]
-Initialization successful in 1.42s
-   Memory Usage: 3710.24 MB (3.71 GB)
-   Footprint per 10M Swarm: 0.37 KB/agent
+### Key Optimizations
 
-EXECUTING TICKS...
-   Average Tick Time: 0.0482s
-   Throughput: 20,746,887 agents/sec
-BENCHMARK COMPLETE (10M scale proven)
-```
+- **mmap-Backed Dormant Pool**: T1 agents are stored in a memory-mapped array with a 256-bit footprint per agent, minimizing the resident set size (RSS).
+- **Spatial Hash Grid**: We use a zero-copy spatial hash for $O(1)$ neighbor queries, avoiding expensive bridge-crossing between WASM and JavaScript in browser environments.
+- **SIRS Epidemiology**: Instead of basic "health," we use a Susceptible-Infected-Recovered system where "Surprise" from data volatility acts as the infectious agent.
+- **Darwinian Genetics**: A custom genetic crossover engine allows for emergent behavioral shifts over thousands of generations.
 
 ---
 
-## The Secret Sauce: Why This Is Hard
+## Performance & Benchmarks
 
-Most browser simulations fake it. We don't.
+We have verified a stable 10,000,000 agent simulation (1M active) on standard hardware with a throughput of **~20.7 Million updates per second**.
 
-- **Zero-Copy Spatial Hash**: We use a `mmap`-backed spatial grid. Neighbor lookups are $O(1)$ and never cross the WASM/JS bridge during the heavy lift.
-- **SIRS Epidemiology Integrated**: We didn't just add a "health" bar. We implemented a Susceptible-Infected-Recovered-Susceptible model where "Surprise" is the pathogen. Volatility breeds infection.
-- **Darwinian Genetics**: Each organism has a 256-bit genome. When they reproduce, they perform real crossover and point mutations. The swarm you see after 1 hour is genetically distinct from the one you started with.
-- **Ebbinghaus Memory Decay**: Organisms have a "Memory Buffer" that follows the forgetting curve. They are highly reactive to new shocks but become habituated to constant volatility.
+Detailed methodology, test environment specs, and instructions to reproduce these numbers can be found in [BENCHMARKS.md](BENCHMARKS.md).
 
 ---
 
-## The Manifesto: Organic vs. Artificial Data
+## Use Cases
 
-Dashboards are for post-mortems. Swarms are for *life*.
-
-We believe the next generation of AI agents shouldn't "read" data; they should "feel" it. OpenRustSwarm is the sensory Subconscious. It processes millions of signals and condenses them into a single, intuition-based state.
-
-*Don't ask the agent what the price is. Ask the agent how the swarm feels.*
-
----
-
-## 🌟 Star Milestones
-
-Help us build the most advanced organic sensory system on Earth.
-
-- **500 Stars**: **The Sound of Tension** — WebAudio module that generates harmonic chords based on the R0 value.
-- **1,000 Stars**: **The Self-Evolving Genome** — LLM-driven genetic synthesis where organisms write their own Rust trait implementations.
-- **2,500 Stars**: **Multi-Environment Swarms** — Cross-instance pheromone diffusion via WebSockets.
-- **5,000 Stars**: **The Sovereign Watcher** — A fully autonomous agent that lives *inside* the swarm and protects it from "market death."
-
-
-## Architecture
-
-1. **LAYER 1: NERVOUS SYSTEM (RUST/WASM)**
-   100+ source files handling spatial hash grids, pheromone fields, and Darwinian crossover. Runs in-browser via WASM at 200K agents @ 60fps.
-2. **LAYER 2: THE VOICE (GEMINI)**
-   Threshold-triggered narration. The swarm speaks when it feels pain.
-3. **LAYER 3: THE HANDS (OPENCLAW)**
-   Direct integration with OpenClaw for signal injection and webhook-driven alerts.
-4. **LAYER 4: MEMORY (EBBINGHAUS)**
-   Agents remember anomalies using exponential decay. They forget the "noise" of flat markets.
+1.  **Collective Intelligence Research**: Testing how high-frequency data shocks propagate through massive populations.
+2.  **Simulation Engineering**: A reference implementation for scaling PyO3/Rust simulations with `mmap`.
+3.  **Visualization Tech**: Stress-testing WebGL and Instanced Rendering in Next.js/WASM environments.
 
 ---
 
@@ -139,39 +79,29 @@ npm install
 npm run dev
 ```
 
-The browser dashboard defaults to **200,000 organic agents** — the limit of real-time WebGL rendering on modern hardware.
+*Note: The browser demo is limited to 200,000 agents to maintain 60fps on typical mobile/web hardware.*
 
 ---
 
 ## Roadmap
 
-- [x] **Rust Engine**: SIRS, spatial hash, tensor engine, LOD (10M scale).
-- [x] **Evolution**: 6 heritable genes, natural selection, crossover.
-- [x] **WASM Bridge**: High-performance browser rendering.
-- [x] **Data Feeds**: Live CoinGecko + GitHub Events integration.
-- [x] **OpenClaw Skill**: Swarm-to-agent coordination protocol.
-- [ ] **Live Demo URL**: Deployment in progress.
-- [ ] **WebAudio**: R0-driven soundscapes (tension chords).
-- [ ] **Mobile Support**: Optimized canvas for touch.
+- [x] **Rust Core**: Memory-mapped LOD system, spatial hash, and SIRS logic.
+- [x] **Evolution**: Genetic crossover and point mutation engine.
+- [x] **WASM Bridge**: High-frequency data injection from CoinGecko/GitHub.
+- [ ] **Methodology Paper**: A detailed write-up of the LOD strategy for agent simulations.
+- [ ] **WebAudio**: R0-driven harmonic chord synthesis.
+- [ ] **Cross-Instance Sync**: Pheromone field diffusion over WebSockets.
 
 ---
 
 ## Contributing
 
-We are looking for people to add new data feeds. Every asset cluster is a sensory portal.
+We welcome technical contributions, especially around SIMD optimizations for the T2/T3 tiers and new data feed integrations. 
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for setup.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for architectural deep dives.
 
 ---
 
 ## License
 
 [MIT License](LICENSE)
-
----
-
-<div align="center">
-  <a href="https://github.com/juyterman1000/openrustswarm/stargazers">
-    <img src="https://img.shields.io/github/stars/juyterman1000/openrustswarm?style=social" alt="GitHub Stars">
-  </a>
-</div>

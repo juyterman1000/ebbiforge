@@ -1,6 +1,6 @@
 # Contributing to OpenRustSwarm
 
-We want your contributions. Here's how to get started.
+We are looking for engineers interested in pushing the boundaries of large-scale agent simulations. Here is how to get involved.
 
 ## Development Setup
 
@@ -16,46 +16,44 @@ cargo test
 ```bash
 cd web
 npm install
-cp .env.local.example .env.local  # Add your GEMINI_API_KEY
 npm run dev
-# → http://localhost:3000
 ```
 
-### Python Server
-```bash
-cd server
-pip install -r requirements.txt
-python main.py
-```
+## Architectural Deep Dives
+
+### 1. The LOD Tiering System (`lod.rs`)
+The core scaling strategy relies on four tiers of agent fidelity.
+- **T1 (Dormant)**: Stored in bit-packed fields within a memory-mapped array. Update cost is effectively zero until a dormancy trigger is hit.
+- **T2 (Simplified)**: Uses a centroid-based physics approximation.
+- **T3 (Full Tensor)**: Full neighbor-to-neighbor interaction using the spatial hash grid.
+- **T4 (Heavy)**: Reserved for agents requiring high-fidelity state histories or external LLM introspection.
+
+**Contribution Area**: We need better heuristics for "Surprise-driven" transitions between T2 and T3 to avoid oscillation.
+
+### 2. Spatial Hash Grid (`spatial.rs`)
+To avoid $O(N^2)$ complexity, we use a uniform spatial grid. 
+- **Zero-Copy**: The grid is designed for minimal allocation during the tick loop.
+- **WASM Bridge**: The grid state is shared with the WebGL renderer via a shared memory buffer.
+
+**Contribution Area**: Implementing multi-layered grids for varying agent radii.
 
 ## Good First Issues
 
-These are easy entry points — each is a self-contained change:
-
-| Task | File(s) | Difficulty |
+| Task | Area | Difficulty |
 |------|---------|------------|
-| Add a new data feed (e.g. earthquake, stock index) | `web/app/api/feeds/` | 🟢 Easy |
-| New swarm color mode | `web/lib/color-maps.ts` | 🟢 Easy |
-| New narrator personality | `web/app/api/swarm/narrate/route.ts` | 🟢 Easy |
-| Mobile-responsive dashboard | `web/app/page.tsx`, `web/app/globals.css` | 🟡 Medium |
-| WebAudio sound design for R₀ tension | `web/hooks/`, new hook | 🟡 Medium |
-| Add a 7th pheromone channel | `openrustswarm-core/src/swarm/` | 🔴 Hard |
-| New heritable gene | `openrustswarm-core/src/evolution/` | 🔴 Hard |
+| Add a new data feed integration | Rust/Python | 🟢 Easy |
+| Optimize SIMD kernels for T2 centroid logic | Rust | 🟡 Medium |
+| Implement WebAudio harmonic synthesis | TS/WASM | 🟡 Medium |
+| Refactor `lod.rs` bitflag packing for efficiency | Rust | 🔴 Hard |
 
 ## Technical Standards
 
-- **Rust**: `cargo fmt` and `cargo test` must pass. No `unsafe` without justification.
-- **Web**: `npx next build` must pass with zero errors.
-- **Performance**: Core engine changes must not regress throughput. Benchmark before/after.
+- **Performance First**: Any PR that regresses throughput (as measured by `test_10m_scale.py`) will require detailed justification.
+- **No Unsafe**: Avoid `unsafe` unless necessary for `mmap` or SIMD intrinsics. Document all such uses.
 
 ## Pull Request Process
 
-1. Fork the repo
-2. Create a feature branch (`git checkout -b feat/your-feature`)
-3. Make your changes
-4. Verify builds (`cargo test` for Rust, `npx next build` for web)
-5. Open a PR with a clear description
-
-## Code of Conduct
-
-Be respectful. Be constructive. We're building something alive.
+1. Fork the repository.
+2. Create a feature branch (`git checkout -b feat/your-fix`).
+3. Benchmark your changes against the `main` branch.
+4. Open a PR with a description of the technical trade-offs made.
