@@ -1,7 +1,7 @@
 <div align="center">
   <img src="logo.svg" alt="OpenRustSwarm" width="280">
 
-  <h3>200,000 organisms that react to the crypto market before you read the number.</h3>
+  <h3>10 million organisms that react to the crypto market before you read the number.</h3>
 
   <p>A living swarm intelligence — built in Rust, visualized in WebAssembly, narrated by Gemini.</p>
 
@@ -108,13 +108,13 @@ Each asset has its own organism cluster. Inter-poll price deltas (not 24h averag
 
 ## Performance
 
-The browser dashboard runs 200K agents in real-time at 60fps. The Rust engine scales further:
+Tested at 10M agents (1M active + 9M dormant via 4-tier LOD architecture). See `test_10m_scale.py`.
 
 | Metric | Browser (WASM) | Native (Rust) |
 |--------|---------------|---------------|
-| Agents | 200,000 | 10,000,000 |
+| Agents | 200,000 @ 60fps | 10,000,000 (LOD) |
 | Memory | ~150 MB | 3.71 GB |
-| Throughput | 60fps real-time | 20.5M updates/sec |
+| Throughput | real-time rendering | 20.5M updates/sec |
 | Per-tick cost | $0.00 | $0.00 |
 
 No LLM in the simulation loop. The biology is pure Rust math.
