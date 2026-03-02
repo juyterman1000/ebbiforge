@@ -20,7 +20,7 @@
 
 ## What is this?
 
-OpenRustSwarm is a biological simulation where **thousands of autonomous organisms** process real-world data as sensory input. Each organism has:
+OpenRustSwarm is a biological simulation where **millions of autonomous organisms** process real-world data as sensory input. Each organism has:
 
 - 🧬 **6 heritable genes** — transfer rate, recovery rate, infection radius, broadcast power, sensitivity, mutation rate
 - 🦠 **SIRS epidemiology** — organisms infect each other with "surprise" when anomalies hit
@@ -201,5 +201,20 @@ We want contributors. Here's how:
 ---
 
 <div align="center">
+
+  <h3>⭐ If organisms reacting to Bitcoin sounds insane — star this repo.</h3>
+
+  <p>Every star helps this project reach developers who want to build something alive.</p>
+
+  <a href="https://github.com/juyterman1000/openrustswarm/stargazers">
+    <img src="https://img.shields.io/github/stars/juyterman1000/openrustswarm?style=social" alt="GitHub Stars">
+  </a>
+  &nbsp;&nbsp;
+  <a href="https://github.com/juyterman1000/openrustswarm/fork">
+    <img src="https://img.shields.io/github/forks/juyterman1000/openrustswarm?style=social" alt="GitHub Forks">
+  </a>
+
+  <br/><br/>
+
   <sub>Built with Rust, WebAssembly, and the belief that organisms are better than dashboards.</sub>
 </div>
