@@ -23,7 +23,7 @@ def run_header(title):
 
 def main():
     print("""
-    OPENRUSTSWARM OFFICIAL PERFORMANCE VERIFICATION
+    EBBIFORGE OFFICIAL PERFORMANCE VERIFICATION
     ------------------------------------------------
     Targets: 8 Fundamental Benchmarks
     Runtime: Ebbiforge (Rust-Backend)
@@ -57,7 +57,7 @@ def main():
 
     # Final Scorecard
     print("\n\n" + "#" * 80)
-    print("  FINAL OPENRUSTSWARM SCORECARD")
+    print("  FINAL EBBIFORGE SCORECARD")
     print("#" * 80)
 
     mapping = {

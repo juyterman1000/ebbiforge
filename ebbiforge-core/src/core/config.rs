@@ -34,7 +34,7 @@ pub struct IntrospectionConfig {
 /// Main hyperparameters for CogOps
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[pyclass]
-pub struct CogOpsConfig {
+pub struct EbbiforgeConfig {
     #[pyo3(get, set)]
     pub safety: SafetyConfig,
     #[pyo3(get, set)]
@@ -46,16 +46,16 @@ pub struct CogOpsConfig {
 }
 
 #[pymethods]
-impl CogOpsConfig {
+impl EbbiforgeConfig {
     #[new]
     pub fn new() -> Self {
         Self::default()
     }
 }
 
-impl Default for CogOpsConfig {
+impl Default for EbbiforgeConfig {
     fn default() -> Self {
-        CogOpsConfig {
+        EbbiforgeConfig {
             safety: SafetyConfig {
                 risk_threshold: 0.5,
                 max_risk_history: 10,

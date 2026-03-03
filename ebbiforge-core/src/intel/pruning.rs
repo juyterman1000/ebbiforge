@@ -1,4 +1,4 @@
-use crate::core::middleware::{CogOpsContext, Middleware};
+use crate::core::middleware::{EbbiforgeContext, Middleware};
 use pyo3::prelude::*;
 use serde::{Deserialize, Serialize};
 use tracing::info;
@@ -188,12 +188,12 @@ impl Middleware for AdaptivePruner {
         "AdaptivePruner"
     }
 
-    fn before_step(&self, _ctx: &mut CogOpsContext) -> Result<(), String> {
+    fn before_step(&self, _ctx: &mut EbbiforgeContext) -> Result<(), String> {
         info!("✂️ [AdaptivePruner] Ready to optimize context.");
         Ok(())
     }
 
-    fn after_step(&self, _ctx: &mut CogOpsContext) -> Result<(), String> {
+    fn after_step(&self, _ctx: &mut EbbiforgeContext) -> Result<(), String> {
         Ok(())
     }
 }

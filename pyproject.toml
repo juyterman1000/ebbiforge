@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "ebbiforge"
-version = "1.0.0"
+version = "4.0.0"
 description = "High-performance multi-agent AI framework — 100M agent scale, selective LLM reasoning"
 readme = "README.md"
 license = { text = "MIT" }

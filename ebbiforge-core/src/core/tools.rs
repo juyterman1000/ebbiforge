@@ -1,4 +1,4 @@
-//! CogOps Tool Registry - Real tool implementations for agentic workflows
+//! Ebbiforge Tool Registry - Real tool implementations for agentic workflows
 //!
 //! This module provides actual tool execution capabilities:
 //! - web_search: Search the web using Google Custom Search API
@@ -318,7 +318,7 @@ pub async fn fetch_url(client: &Client, url: &str) -> ToolResult {
 
     match client
         .get(url)
-        .header("User-Agent", "CogOps/1.0 (Research Agent)")
+        .header("User-Agent", "Ebbiforge/1.0 (Research Agent)")
         .send()
         .await
     {

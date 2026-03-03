@@ -1,4 +1,4 @@
-//! Latent World Model for CogOps
+//! Latent World Model for Ebbiforge
 //!
 //! Provides predictive capabilities for agent planning:
 //! - Latent encoding (compress context to fixed-size vector)

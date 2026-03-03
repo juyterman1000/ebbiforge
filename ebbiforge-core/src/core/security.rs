@@ -1,4 +1,4 @@
-//! Security and Trust layer for CogOps
+//! Security and Trust layer for Ebbiforge
 //!
 //! Provides cryptographic identity and signing for agents to prevent
 //! manipulation and poisoning attacks.

@@ -28,7 +28,7 @@ from ebbiforge.runtime import Runtime
 from ebbiforge.connectors.base import DataSource, Signal
 from ebbiforge.outputs.base import OutputSink, SwarmEvent
 
-__version__ = "1.0.0"
+__version__ = "4.0.0"
 __all__ = [
     "Agent", "Swarm", "Runtime", "Task", "Memory",
     "DataSource", "Signal", "OutputSink", "SwarmEvent",

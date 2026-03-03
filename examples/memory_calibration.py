@@ -27,7 +27,7 @@ def run_calibration(count):
 
 
 if __name__ == "__main__":
-    print("OPENRUSTSWARM MEMORY CALIBRATION")
+    print("EBBIFORGE MEMORY CALIBRATION")
 
     # 1. Measure 1M agents
     m_1m = run_calibration(1_000_000)

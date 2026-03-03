@@ -1,4 +1,4 @@
-use crate::core::middleware::{CogOpsContext, Middleware};
+use crate::core::middleware::{EbbiforgeContext, Middleware};
 use pyo3::prelude::*;
 use regex::Regex;
 use tracing::info;
@@ -73,7 +73,7 @@ impl Middleware for CodeQualityGuard {
         "CodeQualityGuard"
     }
 
-    fn before_step(&self, _ctx: &mut CogOpsContext) -> Result<(), String> {
+    fn before_step(&self, _ctx: &mut EbbiforgeContext) -> Result<(), String> {
         info!("🧐 [CodeReview] Ready to review code quality.");
         Ok(())
     }

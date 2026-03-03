@@ -4,10 +4,10 @@ use pyo3::prelude::*;
 use std::sync::Arc;
 use tracing::info;
 
-/// Shared state passed through the CogOps middleware pipeline.
+/// Shared state passed through the Ebbiforge middleware pipeline.
 #[pyclass]
-#[derive(Clone, Debug)]
-pub struct CogOpsContext {
+#[derive(Clone, Default)]
+pub struct EbbiforgeContext {
     #[pyo3(get, set)]
     pub task_id: String,
     #[pyo3(get, set)]
@@ -27,10 +27,10 @@ pub struct CogOpsContext {
 }
 
 #[pymethods]
-impl CogOpsContext {
+impl EbbiforgeContext {
     #[new]
     pub fn new(task_id: String, prompt: String) -> Self {
-        CogOpsContext {
+        EbbiforgeContext {
             task_id,
             prompt,
             should_stop: false,
@@ -63,17 +63,17 @@ pub trait Middleware: Send + Sync {
     fn name(&self) -> &str;
 
     /// Ran BEFORE the agent executes a step.
-    fn before_step(&self, _ctx: &mut CogOpsContext) -> Result<(), String> {
+    fn before_step(&self, _ctx: &mut EbbiforgeContext) -> Result<(), String> {
         Ok(())
     }
 
     /// Ran AFTER the agent executes a step.
-    fn after_step(&self, _ctx: &mut CogOpsContext) -> Result<(), String> {
+    fn after_step(&self, _ctx: &mut EbbiforgeContext) -> Result<(), String> {
         Ok(())
     }
 
     /// Ran when an error occurs during execution.
-    fn on_error(&self, _ctx: &mut CogOpsContext, _error: &str) -> Result<(), String> {
+    fn on_error(&self, _ctx: &mut EbbiforgeContext, _error: &str) -> Result<(), String> {
         Ok(())
     }
 }
@@ -95,7 +95,7 @@ impl MiddlewarePipeline {
         self.middlewares.push(middleware);
     }
 
-    pub fn run_before(&self, ctx: &mut CogOpsContext) -> Result<(), String> {
+    pub fn run_before(&self, ctx: &mut EbbiforgeContext) -> Result<(), String> {
         for mw in &self.middlewares {
             mw.before_step(ctx)?;
             if ctx.should_stop {
@@ -105,14 +105,14 @@ impl MiddlewarePipeline {
         Ok(())
     }
 
-    pub fn run_after(&self, ctx: &mut CogOpsContext) -> Result<(), String> {
+    pub fn run_after(&self, ctx: &mut EbbiforgeContext) -> Result<(), String> {
         for mw in &self.middlewares {
             mw.after_step(ctx)?;
         }
         Ok(())
     }
 
-    pub fn run_error(&self, ctx: &mut CogOpsContext, error: &str) -> Result<(), String> {
+    pub fn run_error(&self, ctx: &mut EbbiforgeContext, error: &str) -> Result<(), String> {
         for mw in &self.middlewares {
             mw.on_error(ctx, error)?;
         }

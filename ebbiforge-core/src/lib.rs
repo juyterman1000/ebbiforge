@@ -1,4 +1,4 @@
-//! CogOps Core v1.0.0 - High-Performance AI Agent Runtime
+//! Ebbiforge Core v4.0.0 - High-Performance AI Agent Runtime
 //!
 //! This library provides the core infrastructure for building and running
 //! autonomous AI agents with a focus on safety, memory efficiency (zero-copy),
@@ -21,8 +21,8 @@ use std::sync::Arc;
 
 // Re-export key types for internal use
 pub use core::agent::{Agent, AgentRegistry};
-pub use core::config::CogOpsConfig;
-pub use core::middleware::{CogOpsContext, Middleware, MiddlewarePipeline};
+pub use core::config::EbbiforgeConfig;
+pub use core::middleware::{EbbiforgeContext, Middleware, MiddlewarePipeline};
 pub use core::runner::{AgentGraph, AgentGraphPy};
 pub use intel::safety::PredictiveSafetyShield;
 pub use swarm::SwarmConfig;
@@ -134,7 +134,7 @@ fn ebbiforge_core(_py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<HistoryBuffer>()?;
 
     // Configuration
-    m.add_class::<core::config::CogOpsConfig>()?;
+    m.add_class::<core::config::EbbiforgeConfig>()?;
 
     // Agents
     m.add_class::<core::agent::Agent>()?;
@@ -147,7 +147,7 @@ fn ebbiforge_core(_py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<core::workflow::LoopAgent>()?;
 
     // Middleware
-    m.add_class::<core::middleware::CogOpsContext>()?;
+    m.add_class::<core::middleware::EbbiforgeContext>()?;
     m.add_class::<intel::safety::PredictiveSafetyShield>()?;
 
     // Swarm

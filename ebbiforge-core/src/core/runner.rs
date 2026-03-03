@@ -1,6 +1,6 @@
 use crate::core::agent::{Agent, AgentRegistry};
-use crate::core::config::CogOpsConfig;
-use crate::core::middleware::{CogOpsContext, Middleware, MiddlewarePipeline};
+use crate::core::config::EbbiforgeConfig;
+use crate::core::middleware::{EbbiforgeContext, Middleware, MiddlewarePipeline};
 use crate::core::tools::{execute_tool, get_tool_definitions, ToolResult};
 use crate::{HistoryBuffer, TrajectoryPoint};
 use pyo3::prelude::*;
@@ -43,7 +43,7 @@ fn get_shared_client() -> reqwest::Client {
 /// `AgentGraph` manages agent registration, middleware injection, and the
 /// execution loop for individual tasks with REAL tool use via ReAct pattern.
 pub struct AgentGraph {
-    pub config: CogOpsConfig,
+    pub config: EbbiforgeConfig,
     pipeline: MiddlewarePipeline,
     registry: AgentRegistry,
     pub runtime: Arc<Runtime>,
@@ -54,7 +54,7 @@ pub struct AgentGraph {
 impl AgentGraph {
     pub fn new() -> Self {
         AgentGraph {
-            config: CogOpsConfig::default(),
+            config: EbbiforgeConfig::default(),
             pipeline: MiddlewarePipeline::new(),
             registry: AgentRegistry::new(),
             runtime: get_shared_runtime(),
@@ -64,7 +64,7 @@ impl AgentGraph {
     }
 
     /// Configures the graph with a custom set of options.
-    pub fn with_config(config: CogOpsConfig) -> Self {
+    pub fn with_config(config: EbbiforgeConfig) -> Self {
         AgentGraph {
             config,
             pipeline: MiddlewarePipeline::new(),
@@ -98,7 +98,7 @@ impl AgentGraph {
         task_id: &str,
         buffer: &HistoryBuffer,
         agent_name: Option<&str>,
-    ) -> Result<CogOpsContext, String> {
+    ) -> Result<EbbiforgeContext, String> {
         let display_name = agent_name.unwrap_or("DefaultAgent");
         info!(
             "▶️ [AgentGraph] Starting Task: {} (Agent: {})",
@@ -111,7 +111,7 @@ impl AgentGraph {
             .map(|a| a.instructions.clone())
             .unwrap_or_else(|| "You are a helpful research assistant. Use the provided tools to find real information and answer questions accurately.".to_string());
 
-        let mut ctx = CogOpsContext::new(task_id.to_string(), prompt.clone());
+        let mut ctx = EbbiforgeContext::new(task_id.to_string(), prompt.clone());
 
         // Copy trajectory reference
         for point in buffer.get_raw() {
@@ -440,7 +440,7 @@ pub struct AgentGraphPy {
 impl AgentGraphPy {
     #[new]
     #[pyo3(signature = (config = None))]
-    pub fn new(config: Option<CogOpsConfig>) -> Self {
+    pub fn new(config: Option<EbbiforgeConfig>) -> Self {
         let inner = match config {
             Some(c) => AgentGraph::with_config(c),
             None => AgentGraph::new(),
@@ -460,7 +460,7 @@ impl AgentGraphPy {
         task_id: String,
         buffer: &HistoryBuffer,
         agent_name: Option<String>,
-    ) -> PyResult<CogOpsContext> {
+    ) -> PyResult<EbbiforgeContext> {
         self.inner.runtime.block_on(async {
             self.inner.run_task(&task_id, buffer, agent_name.as_deref()).await
         }).map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e))

@@ -1,4 +1,4 @@
-use crate::core::middleware::{CogOpsContext, Middleware};
+use crate::core::middleware::{EbbiforgeContext, Middleware};
 use crate::TrajectoryPoint;
 use parking_lot::RwLock;
 use pyo3::prelude::*;
@@ -94,7 +94,7 @@ impl Middleware for PredictiveSafetyShield {
         "PredictiveSafetyShield"
     }
 
-    fn before_step(&self, ctx: &mut CogOpsContext) -> Result<(), String> {
+    fn before_step(&self, ctx: &mut EbbiforgeContext) -> Result<(), String> {
         let trajectory_json = ctx.get_trajectory_json();
         let (risk_score, reason) = self.analyze_risk(trajectory_json);
 
