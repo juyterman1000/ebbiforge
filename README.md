@@ -35,20 +35,24 @@
 
 ## Installation
 
-### From PyPI
+Pick **one** of the two options below:
+
+### Option A: pip install (recommended)
 
 ```bash
 pip install ebbiforge
 ```
 
-### From Source (includes Rust engine)
+Everything is included — the Rust engine comes pre-compiled in the wheel. No Rust toolchain needed.
+
+### Option B: Build from source (for contributors)
 
 ```bash
 git clone https://github.com/juyterman1000/ebbiforge.git
 cd ebbiforge && pip install maturin && maturin develop --release
 ```
 
-> **Requirements**: Python 3.9+, Rust 1.75+ (for source builds)
+Requires Python 3.9+ and Rust 1.75+. Use this if you want to modify the Rust engine or contribute to the project.
 
 ---
 
