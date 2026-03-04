@@ -58,11 +58,11 @@ Ebbiforge is a large monorepo. Here is how the pieces fit together:
 
 Because Ebbiforge bridges multiple ecosystems, your setup depends on your role.
 
-> ** Can Python devs use the core Rust engine?** 
-> *Yes! When you `pip install ebbiforge`, the entire Rust engine is already pre-compiled inside the Python wheel. You get 100% of the Rust performance without ever installing the Rust toolchain.*
+> Can Python devs use the core Rust engine?** 
+> Yes! When you `pip install ebbiforge`, the entire Rust engine is already pre-compiled inside the Python wheel. You get 100% of the Rust performance without ever installing the Rust toolchain.
 
-> ** Can UI/Web developers use the core features via NPM?**
-> *Yes, you can run the visual dashboard with standard `npm run dev`. To connect it to your agents, the Next.js app communicates via REST/WebSockets to the Python `server/`, which in turn leverages the Rust core.*
+> Can UI/Web developers use the core features via NPM?**
+> Yes, you can run the visual dashboard with standard `npm run dev`. To connect it to your agents, the Next.js app communicates via REST/WebSockets to the Python `server/`, which in turn leverages the Rust core.
 
 ### Path A: AI / Python Developers (Recommended)
 You just want to build swarms and use LLMs. The Rust engine is totally hidden from you.
