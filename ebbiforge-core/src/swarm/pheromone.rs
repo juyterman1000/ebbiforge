@@ -37,15 +37,17 @@ impl PheromoneField {
     fn bilinear_coords(&self, x: f32, y: f32) -> (usize, usize, f32, f32) {
         let gx = (x / self.cell_size).clamp(0.0, (self.width - 2) as f32);
         let gy = (y / self.cell_size).clamp(0.0, (self.height - 2) as f32);
-        
+
         let cx = gx.floor() as usize;
         let cy = gy.floor() as usize;
-        
+
         (cx, cy, gx - cx as f32, gy - cy as f32)
     }
 
     pub fn deposit(&mut self, x: f32, y: f32, channel: usize, amount: f32) {
-        if channel >= self.channels { return; }
+        if channel >= self.channels {
+            return;
+        }
         let (cx, cy, fx, fy) = self.bilinear_coords(x, y);
         let w = self.width;
         let ch_off = channel * w * self.height;
@@ -58,7 +60,9 @@ impl PheromoneField {
     }
 
     pub fn sample(&self, x: f32, y: f32, channel: usize) -> f32 {
-        if channel >= self.channels { return 0.0; }
+        if channel >= self.channels {
+            return 0.0;
+        }
         let (cx, cy, _, _) = self.bilinear_coords(x, y);
         let ch_off = channel * self.width * self.height;
         // Nearest neighbor approximation for gradient fetching speed
@@ -77,7 +81,7 @@ impl PheromoneField {
     pub fn tick(&mut self) {
         let w = self.width;
         let h = self.height;
-        
+
         // We need a scratch buffer for synchronous updates to prevent directional bias
         let mut next_data = self.data.clone();
 
@@ -86,23 +90,23 @@ impl PheromoneField {
             let d = self.diffusion[ch];
             let off = ch * w * h;
 
-            for i in 1..h-1 {
-                for j in 1..w-1 {
+            for i in 1..h - 1 {
+                for j in 1..w - 1 {
                     let idx = off + i * w + j;
-                    
+
                     // 5-point stencil Laplacian
-                    let laplacian = self.data[off + (i - 1) * w + j] 
-                                  + self.data[off + (i + 1) * w + j]
-                                  + self.data[off + i * w + (j - 1)] 
-                                  + self.data[off + i * w + (j + 1)]
-                                  - 4.0 * self.data[idx];
-                                  
+                    let laplacian = self.data[off + (i - 1) * w + j]
+                        + self.data[off + (i + 1) * w + j]
+                        + self.data[off + i * w + (j - 1)]
+                        + self.data[off + i * w + (j + 1)]
+                        - 4.0 * self.data[idx];
+
                     // Diffusion + Decay
                     next_data[idx] = (self.data[idx] + d * laplacian) * (1.0 - rate);
                 }
             }
         }
-        
+
         self.data = next_data;
     }
 }

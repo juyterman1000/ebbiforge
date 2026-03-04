@@ -1,5 +1,5 @@
 //! Ebbiforge 'Subconscious' Watcher
-//! 
+//!
 //! Ingests real-world signals into agent states at scale.
 //! Triggers "Surprise" ripples for OpenClaw alerts.
 
@@ -22,7 +22,11 @@ pub struct Signal {
 impl Signal {
     #[new]
     pub fn new(source_id: String, value: f32, surprise_weight: f32) -> Self {
-        Self { source_id, value, surprise_weight }
+        Self {
+            source_id,
+            value,
+            surprise_weight,
+        }
     }
 }
 
@@ -61,18 +65,29 @@ impl SwarmWatcher {
         let swarm = self.swarm.borrow(py);
         let n = swarm.active.ids.len();
         let mut alerts = Vec::new();
-        
+
         // Count how many agents are in a "Surprise Panic" state
-        let surprised_count = swarm.active.surprise_scores.iter()
+        let surprised_count = swarm
+            .active
+            .surprise_scores
+            .iter()
             .filter(|&&s| s > self.alert_threshold)
             .count();
-            
-        let ratio = if n > 0 { surprised_count as f32 / n as f32 } else { 0.0 };
-        
-        if ratio > 0.05 { // 5% of the swarm is surprised
-            alerts.push(format!("Consensus Anomaly Detected: {:.1}% of swarm in Surprise State", ratio * 100.0));
+
+        let ratio = if n > 0 {
+            surprised_count as f32 / n as f32
+        } else {
+            0.0
+        };
+
+        if ratio > 0.05 {
+            // 5% of the swarm is surprised
+            alerts.push(format!(
+                "Consensus Anomaly Detected: {:.1}% of swarm in Surprise State",
+                ratio * 100.0
+            ));
         }
-        
+
         alerts
     }
 }

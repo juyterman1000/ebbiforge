@@ -183,8 +183,12 @@ impl PopulationEngine {
 
         // Mutate Tools (Skillset): randomly add or remove a tool capability
         let available_tools = [
-            "web_search", "code_execution", "math_solver",
-            "data_analysis", "document_retrieval", "api_caller",
+            "web_search",
+            "code_execution",
+            "math_solver",
+            "data_analysis",
+            "document_retrieval",
+            "api_caller",
         ];
         if rng.gen::<f32>() < 0.15 {
             // 15% chance: toggle a random tool

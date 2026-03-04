@@ -3,29 +3,29 @@
 //! Handles massive-scale agent simulation using tensor-based state (SoA).
 //! Inspired by modern simulation frameworks.
 
-pub mod promoter;
-pub mod spatial;
-pub mod pollination;
-pub mod tensor_engine;
-pub mod lod;
-pub mod swarm_engine;
-pub mod grid;
-pub mod master_pipeline;
-pub mod pheromone;
-pub mod py_api;
-pub mod mmap_pool;
-pub mod watcher;
-pub mod scale_test;
 pub mod criticality_test;
 pub mod evolution_test;
+pub mod grid;
+pub mod lod;
+pub mod master_pipeline;
+pub mod mmap_pool;
+pub mod pheromone;
+pub mod pollination;
+pub mod promoter;
+pub mod py_api;
+pub mod scale_test;
+pub mod spatial;
+pub mod swarm_engine;
+pub mod tensor_engine;
+pub mod watcher;
 
 use pyo3::prelude::*;
 
+pub use lod::{DormantAgent, ProductionTensorSwarm, SimplifiedPool};
+pub use master_pipeline::{PropagationConfig, SwarmEvolutionConfig};
 pub use promoter::PromotionLogic;
 pub use spatial::GridMap;
 pub use tensor_engine::TensorSwarm;
-pub use lod::{DormantAgent, SimplifiedPool, ProductionTensorSwarm};
-pub use master_pipeline::{PropagationConfig, SwarmEvolutionConfig};
 
 /// Configuration for the Swarm Engine
 #[derive(Clone, Debug)]

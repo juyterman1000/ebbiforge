@@ -33,7 +33,7 @@ pub struct TensorSwarm {
     pub surprise_scores: Vec<f32>,
     #[pyo3(get)]
     pub share_probabilities: Vec<f32>,
-    
+
     // Rust-internal Tracking
     pollinator_states: Vec<PollinatorState>,
     latent_states: Vec<LatentState>,
@@ -56,11 +56,15 @@ pub struct TensorSwarm {
 impl TensorSwarm {
     #[new]
     #[pyo3(signature = (agent_count=10000, world_config=None, config=None))]
-    pub fn new(agent_count: usize, world_config: Option<WorldModelConfig>, config: Option<SwarmConfig>) -> Self {
+    pub fn new(
+        agent_count: usize,
+        world_config: Option<WorldModelConfig>,
+        config: Option<SwarmConfig>,
+    ) -> Self {
         let mut cfg = config.unwrap_or_default();
         cfg.population_size = agent_count;
         let w_cfg = world_config.unwrap_or_default();
-        
+
         // Sync SwarmConfig bounds to WorldModelConfig grid
         cfg.world_width = w_cfg.grid_size.0;
         cfg.world_height = w_cfg.grid_size.1;
@@ -77,11 +81,15 @@ impl TensorSwarm {
 
         let mut x_vec = vec![0.0; size];
         let mut y_vec = vec![0.0; size];
-        
+
         let width = cfg.world_width as f32;
         let height = cfg.world_height as f32;
-        x_vec.par_iter_mut().for_each(|x| *x = rand::random::<f32>() * width);
-        y_vec.par_iter_mut().for_each(|y| *y = rand::random::<f32>() * height);
+        x_vec
+            .par_iter_mut()
+            .for_each(|x| *x = rand::random::<f32>() * width);
+        y_vec
+            .par_iter_mut()
+            .for_each(|y| *y = rand::random::<f32>() * height);
 
         // Initialize vectors (SoA)
         TensorSwarm {
@@ -120,7 +128,7 @@ impl TensorSwarm {
             .for_each(|y| *y = rand::random::<f32>() * height);
     }
 
-    #[pyo3(name="step")]
+    #[pyo3(name = "step")]
     pub fn step(&mut self) {
         self.tick();
     }
@@ -129,7 +137,7 @@ impl TensorSwarm {
     pub fn tick(&mut self) {
         self.global_tick += 1;
         let global_tick = self.global_tick;
-        
+
         let width = self.config.world_width as f32;
         let height = self.config.world_height as f32;
         let size = self.ids.len();
@@ -150,58 +158,74 @@ impl TensorSwarm {
             .zip(trade_rewards.par_iter_mut())
             .zip(broadcasting.par_iter_mut())
             .zip(needs_promotion.par_iter_mut())
-            .for_each(|((((((((x, y), health), resources), surprise), pollinator), reward), is_broadcasting), promote)| {
-                // Rule: Brownian Motion
-                *x = (*x + (rand::random::<f32>() - 0.5) * 2.0).clamp(0.0, width);
-                *y = (*y + (rand::random::<f32>() - 0.5) * 2.0).clamp(0.0, height);
-                *health *= 0.999; // Natural decay
+            .for_each(
+                |(
+                    (
+                        ((((((x, y), health), resources), surprise), pollinator), reward),
+                        is_broadcasting,
+                    ),
+                    promote,
+                )| {
+                    // Rule: Brownian Motion
+                    *x = (*x + (rand::random::<f32>() - 0.5) * 2.0).clamp(0.0, width);
+                    *y = (*y + (rand::random::<f32>() - 0.5) * 2.0).clamp(0.0, height);
+                    *health *= 0.999; // Natural decay
 
-                // Rule: Ebbinghaus decay on surprise_score
-                let retention = (-0.1 * (1.0 - *surprise).max(0.1)).exp();
-                *surprise = *surprise * retention;
+                    // Rule: Ebbinghaus decay on surprise_score
+                    let retention = (-0.1 * (1.0 - *surprise).max(0.1)).exp();
+                    *surprise = *surprise * retention;
 
-                let mut traded = false;
+                    let mut traded = false;
 
-                // Harvest resources at villages
-                for village in self.villages.iter() {
-                    if (*x - village.0).abs() < 5.0 && (*y - village.1).abs() < 5.0 {
-                        *resources += 1.0;
-                        break;
-                    }
-                }
-
-                // Sell resources at cities
-                for city in self.cities.iter() {
-                    if (*x - city.0).abs() < 5.0 && (*y - city.1).abs() < 5.0 {
-                        if *resources > 0.0 {
-                            *health = (*health + 0.5).min(1.0); // Heal from successful trade
-                            *resources -= 1.0;
-                            traded = true;
-                            // Signal that a complex trade occurred, triggering LLM negotiation 10% of the time
-                            if rand::random::<f32>() < 0.10 {
-                                *promote = true;
-                            }
+                    // Harvest resources at villages
+                    for village in self.villages.iter() {
+                        if (*x - village.0).abs() < 5.0 && (*y - village.1).abs() < 5.0 {
+                            *resources += 1.0;
+                            break;
                         }
-                        break;
                     }
-                }
 
-                // RL Signal: A successful trade validates any past info we acted on.
-                // We waste a tiny bit of energy if we didn't trade (baseline survival cost).
-                *reward = if traded || *surprise > 0.8 { 1.0 } else { -0.1 };
+                    // Sell resources at cities
+                    for city in self.cities.iter() {
+                        if (*x - city.0).abs() < 5.0 && (*y - city.1).abs() < 5.0 {
+                            if *resources > 0.0 {
+                                *health = (*health + 0.5).min(1.0); // Heal from successful trade
+                                *resources -= 1.0;
+                                traded = true;
+                                // Signal that a complex trade occurred, triggering LLM negotiation 10% of the time
+                                if rand::random::<f32>() < 0.10 {
+                                    *promote = true;
+                                }
+                            }
+                            break;
+                        }
+                    }
 
-                // Determine if we INTEND to share our context to local neighbors
-                *is_broadcasting = pollinator.should_pollinate(rand::random(), *surprise);
-            });
+                    // RL Signal: A successful trade validates any past info we acted on.
+                    // We waste a tiny bit of energy if we didn't trade (baseline survival cost).
+                    *reward = if traded || *surprise > 0.8 { 1.0 } else { -0.1 };
+
+                    // Determine if we INTEND to share our context to local neighbors
+                    *is_broadcasting = pollinator.should_pollinate(rand::random(), *surprise);
+                },
+            );
 
         // Optimization: Collect the spatial coordinates of ONLY the agents who decided to broadcast
-        // This avoids N^2 distance checks. 
-        let broadcasters: Vec<(u32, f32, f32)> = self.ids.iter().zip(self.x.iter()).zip(self.y.iter()).zip(broadcasting.iter())
+        // This avoids N^2 distance checks.
+        let broadcasters: Vec<(u32, f32, f32)> = self
+            .ids
+            .iter()
+            .zip(self.x.iter())
+            .zip(self.y.iter())
+            .zip(broadcasting.iter())
             .filter_map(|(((id, x), y), b)| if *b { Some((*id, *x, *y)) } else { None })
             .collect();
-            
+
         // Collect promotions
-        let new_promotions: Vec<u32> = self.ids.iter().zip(needs_promotion.iter())
+        let new_promotions: Vec<u32> = self
+            .ids
+            .iter()
+            .zip(needs_promotion.iter())
             .filter_map(|(id, p)| if *p { Some(*id) } else { None })
             .collect();
         self.awaiting_promotions.extend(new_promotions);
@@ -216,13 +240,12 @@ impl TensorSwarm {
             .zip(self.y.par_iter())
             .zip(trade_rewards.par_iter())
             .for_each(|((((pollinator, share_prob), x), y), reward)| {
-                
                 // 1. Send the trade reward feedback back to whoever shared context with us recently
                 // The pollinator state holds a hashmap of (Agent_ID -> Tick_of_Share)
                 // We use `.clone()` on the keys to avoid concurrent borrow mutations while sending feedback
-                let active_keys: Vec<u32> = pollinator.active_shares_keys(); 
+                let active_keys: Vec<u32> = pollinator.active_shares_keys();
                 for broker_id in active_keys {
-                     pollinator.apply_feedback(broker_id, *reward, global_tick);
+                    pollinator.apply_feedback(broker_id, *reward, global_tick);
                 }
 
                 // 2. Receive new signals from nearby broadcasters (Simulating P2P Info Exchange)
@@ -280,7 +303,7 @@ impl TensorSwarm {
                 let dy = *y - location.1;
                 if (dx * dx + dy * dy) <= r2 {
                     // Pull everybody to that exact zone immediately and set their surprise
-                    *surprise = intensity; 
+                    *surprise = intensity;
                 }
             });
     }
@@ -289,27 +312,38 @@ impl TensorSwarm {
     pub fn sample_population_metrics(&self) -> PyObject {
         Python::with_gil(|py| {
             let dict = PyDict::new_bound(py);
-            dict.set_item("active_heavy_agents", self.active_heavy_agents).unwrap();
-            
+            dict.set_item("active_heavy_agents", self.active_heavy_agents)
+                .unwrap();
+
             // For histogram metrics
-            dict.set_item("share_probability_distribution", self.share_probabilities.clone()).unwrap();
-            
+            dict.set_item(
+                "share_probability_distribution",
+                self.share_probabilities.clone(),
+            )
+            .unwrap();
+
             // Calculate mean surprise
             let sum: f32 = self.surprise_scores.iter().sum();
-            let mean = if self.surprise_scores.is_empty() { 0.0 } else { sum / self.surprise_scores.len() as f32 };
+            let mean = if self.surprise_scores.is_empty() {
+                0.0
+            } else {
+                sum / self.surprise_scores.len() as f32
+            };
             dict.set_item("mean_surprise_score", mean).unwrap();
 
             // Mean latent state norm (cognitive activity indicator)
             let latent_norm: f32 = if self.latent_states.is_empty() {
                 0.0
             } else {
-                let total: f32 = self.latent_states.iter()
+                let total: f32 = self
+                    .latent_states
+                    .iter()
                     .map(|ls| ls.vector.iter().map(|v| v * v).sum::<f32>().sqrt())
                     .sum();
                 total / self.latent_states.len() as f32
             };
             dict.set_item("mean_latent_norm", latent_norm).unwrap();
-            
+
             dict.into()
         })
     }

@@ -1,6 +1,6 @@
+use super::grid::SpatialHashGrid;
 use super::mmap_pool::MmapSwarmPool;
 use super::pheromone::PheromoneField;
-use super::grid::SpatialHashGrid;
 use rand::Rng;
 use std::time::Instant;
 
@@ -64,12 +64,12 @@ impl PropagationConfig {
 
 /// Gene ranges for clamping after mutation. (min, max) pairs.
 pub const GENE_RANGES: [(f32, f32); 6] = [
-    (0.80, 0.99),  // gene_decay
-    (0.01, 0.30),  // gene_transfer
-    (0.05, 0.80),  // gene_refractory
-    (0.00, 0.50),  // gene_danger_sense
-    (0.00, 0.80),  // gene_novelty_drive
-    (0.50, 5.00),  // gene_speed
+    (0.80, 0.99), // gene_decay
+    (0.01, 0.30), // gene_transfer
+    (0.05, 0.80), // gene_refractory
+    (0.00, 0.50), // gene_danger_sense
+    (0.00, 0.80), // gene_novelty_drive
+    (0.50, 5.00), // gene_speed
 ];
 
 /// Configuration for Darwinian evolution of agent genomes.
@@ -135,9 +135,17 @@ impl SwarmEngineMaster {
 
         Self {
             pool,
-            pheromones: PheromoneField::new(pheromone_res, pheromone_res, width / pheromone_res as f32),
+            pheromones: PheromoneField::new(
+                pheromone_res,
+                pheromone_res,
+                width / pheromone_res as f32,
+            ),
             grid: SpatialHashGrid::new(
-                if n_agents >= 10_000_000 { 1 << 20 } else { 1 << 18 },
+                if n_agents >= 10_000_000 {
+                    1 << 20
+                } else {
+                    1 << 18
+                },
                 perception, // cell_size = perception_radius for optimal 3x3 query
                 [0.0, 0.0],
             ),
@@ -282,11 +290,31 @@ impl SwarmEngineMaster {
             let py = y[i];
 
             // Per-agent or global parameters
-            let decay = if evo_enabled { g_decay[i] } else { cfg.surprise_decay };
-            let transfer = if evo_enabled { g_transfer[i] } else { cfg.surprise_transfer };
-            let refract_buildup = if evo_enabled { g_refractory[i] } else { cfg.refractory_buildup };
-            let danger_fb = if evo_enabled { g_danger_sense[i] } else { cfg.danger_feedback };
-            let novelty_attr = if evo_enabled { g_novelty_drive[i] } else { cfg.novelty_attraction };
+            let decay = if evo_enabled {
+                g_decay[i]
+            } else {
+                cfg.surprise_decay
+            };
+            let transfer = if evo_enabled {
+                g_transfer[i]
+            } else {
+                cfg.surprise_transfer
+            };
+            let refract_buildup = if evo_enabled {
+                g_refractory[i]
+            } else {
+                cfg.refractory_buildup
+            };
+            let danger_fb = if evo_enabled {
+                g_danger_sense[i]
+            } else {
+                cfg.danger_feedback
+            };
+            let novelty_attr = if evo_enabled {
+                g_novelty_drive[i]
+            } else {
+                cfg.novelty_attraction
+            };
             let max_speed = if evo_enabled { g_speed[i] } else { 2.0 };
 
             // Neighbor aggregation
@@ -338,7 +366,7 @@ impl SwarmEngineMaster {
                 let nc = neighbor_count as f32;
                 fx += (sum_x / nc - px) * 0.01; // cohesion
                 fy += (sum_y / nc - py) * 0.01;
-                fx += sep_x * 0.05;              // separation
+                fx += sep_x * 0.05; // separation
                 fy += sep_y * 0.05;
             }
 
@@ -493,12 +521,18 @@ impl SwarmEngineMaster {
                     (val + gauss * sigma).clamp(min, max)
                 };
 
-                out_gene_decay[dead_idx] = mutate(parent_decay[pi], GENE_RANGES[0].0, GENE_RANGES[0].1);
-                out_gene_transfer[dead_idx] = mutate(parent_transfer[pi], GENE_RANGES[1].0, GENE_RANGES[1].1);
-                out_gene_refractory[dead_idx] = mutate(parent_refractory[pi], GENE_RANGES[2].0, GENE_RANGES[2].1);
-                out_gene_danger[dead_idx] = mutate(parent_danger[pi], GENE_RANGES[3].0, GENE_RANGES[3].1);
-                out_gene_novelty[dead_idx] = mutate(parent_novelty[pi], GENE_RANGES[4].0, GENE_RANGES[4].1);
-                out_gene_speed[dead_idx] = mutate(parent_speed[pi], GENE_RANGES[5].0, GENE_RANGES[5].1);
+                out_gene_decay[dead_idx] =
+                    mutate(parent_decay[pi], GENE_RANGES[0].0, GENE_RANGES[0].1);
+                out_gene_transfer[dead_idx] =
+                    mutate(parent_transfer[pi], GENE_RANGES[1].0, GENE_RANGES[1].1);
+                out_gene_refractory[dead_idx] =
+                    mutate(parent_refractory[pi], GENE_RANGES[2].0, GENE_RANGES[2].1);
+                out_gene_danger[dead_idx] =
+                    mutate(parent_danger[pi], GENE_RANGES[3].0, GENE_RANGES[3].1);
+                out_gene_novelty[dead_idx] =
+                    mutate(parent_novelty[pi], GENE_RANGES[4].0, GENE_RANGES[4].1);
+                out_gene_speed[dead_idx] =
+                    mutate(parent_speed[pi], GENE_RANGES[5].0, GENE_RANGES[5].1);
                 out_generation[dead_idx] = parent_gen[pi] + 1;
 
                 // Reset child state
@@ -513,7 +547,9 @@ impl SwarmEngineMaster {
         if self.global_tick % 100 == 0 && births > 0 {
             println!(
                 "Evolution tick {}: {} deaths, {} births",
-                self.global_tick, dead.len(), births
+                self.global_tick,
+                dead.len(),
+                births
             );
         }
     }

@@ -66,10 +66,18 @@ impl SimplifiedPool {
             self.positions_x[i] += self.velocities_x[i];
             self.positions_y[i] += self.velocities_y[i];
             // Wrap at world boundaries (1000x1000 default)
-            if self.positions_x[i] > 1000.0 { self.positions_x[i] -= 1000.0; }
-            if self.positions_x[i] < 0.0 { self.positions_x[i] += 1000.0; }
-            if self.positions_y[i] > 1000.0 { self.positions_y[i] -= 1000.0; }
-            if self.positions_y[i] < 0.0 { self.positions_y[i] += 1000.0; }
+            if self.positions_x[i] > 1000.0 {
+                self.positions_x[i] -= 1000.0;
+            }
+            if self.positions_x[i] < 0.0 {
+                self.positions_x[i] += 1000.0;
+            }
+            if self.positions_y[i] > 1000.0 {
+                self.positions_y[i] -= 1000.0;
+            }
+            if self.positions_y[i] < 0.0 {
+                self.positions_y[i] += 1000.0;
+            }
         }
     }
 }
@@ -87,7 +95,7 @@ pub struct ProductionTensorSwarm {
     pub active: TensorSwarm,
 
     // Tier 4 (Handled externally via active.awaiting_promotions -> AgentGraph async)
-    
+
     // Global conditions (e.g. ambient surprise/danger) for awakening dormant agents
     global_triggers: u64,
 
@@ -166,7 +174,7 @@ impl ProductionTensorSwarm {
         // Fibonacci hash scatter: deterministic position from agent ID
         let hash = (dormant.id as f32) * 0.6180339887;
         let frac = hash - hash.floor();
-        let px = frac * 1000.0;  // Scatter across world width
+        let px = frac * 1000.0; // Scatter across world width
         let py = ((dormant.id as f32 * 2.2360679775).fract()) * 1000.0;
         // Velocity from predicted_state: higher state = faster
         let speed = 0.05 + (dormant.predicted_state as f32) * 0.02;
@@ -184,7 +192,7 @@ impl ProductionTensorSwarm {
         let surprise_scores = &self.active.surprise_scores;
         let health_scores = &self.active.health;
         let demotion_threshold: f32 = 0.01; // Demote if surprise < 1%
-        let health_floor: f32 = 0.95;       // Only demote healthy agents (boring = healthy + unsurprised)
+        let health_floor: f32 = 0.95; // Only demote healthy agents (boring = healthy + unsurprised)
 
         // Scan Tier 3 for agents that are both healthy and unsurprised
         // These agents are wasting Tier 3 compute cycles

@@ -44,8 +44,19 @@ mod tests {
             }
         }
 
-        println!("{:<5} | {:<9} | {:<8} | {:<7} | {:<7} | {:<7} | {:<9} | {:<7} | {:<7} | {}",
-            "Tick", "Surprised", "Delta", "% Pop", "R₀_eff", "Mean R", "Mean Dist", "Peak S", "Danger", "Time");
+        println!(
+            "{:<5} | {:<9} | {:<8} | {:<7} | {:<7} | {:<7} | {:<9} | {:<7} | {:<7} | {}",
+            "Tick",
+            "Surprised",
+            "Delta",
+            "% Pop",
+            "R₀_eff",
+            "Mean R",
+            "Mean Dist",
+            "Peak S",
+            "Danger",
+            "Time"
+        );
         println!("{}", "-".repeat(120));
 
         let mut prev_count = 0u64;
@@ -58,14 +69,19 @@ mod tests {
 
             if tick == 0 {
                 prev_count = state.count;
-                println!("{:<5} | {:<9} | {:<8} | {:<7} | {:<7} | {:<7} | {:<9} | {:<7} | {:<7} | {}",
-                    "init", state.count, "-",
+                println!(
+                    "{:<5} | {:<9} | {:<8} | {:<7} | {:<7} | {:<7} | {:<9} | {:<7} | {:<7} | {}",
+                    "init",
+                    state.count,
+                    "-",
                     format!("{:.2}%", state.count as f64 / 10000.0),
-                    format!("{:.3}", state.r0_eff), format!("{:.4}", state.mean_refractory),
+                    format!("{:.3}", state.r0_eff),
+                    format!("{:.4}", state.mean_refractory),
                     format!("{:.1}", state.mean_dist),
                     format!("{:.3}", state.peak),
                     format!("{:.4}", state.danger_density),
-                    "-");
+                    "-"
+                );
             }
 
             engine.tick();
@@ -74,7 +90,8 @@ mod tests {
             let new_state = measure_surprise_state(&engine, origin);
             let delta = new_state.count as i64 - prev_count as i64;
 
-            println!("{:<5} | {:<9} | {:<8} | {:<7} | {:<7} | {:<7} | {:<9} | {:<7} | {:<7} | {:.1}s",
+            println!(
+                "{:<5} | {:<9} | {:<8} | {:<7} | {:<7} | {:<7} | {:<9} | {:<7} | {:<7} | {:.1}s",
                 tick + 1,
                 new_state.count,
                 format!("{:+}", delta),
@@ -84,7 +101,8 @@ mod tests {
                 format!("{:.1}", new_state.mean_dist),
                 format!("{:.4}", new_state.peak),
                 format!("{:.4}", new_state.danger_density),
-                elapsed.as_secs_f64());
+                elapsed.as_secs_f64()
+            );
 
             _prev_delta = delta;
             prev_count = new_state.count;
@@ -101,20 +119,35 @@ mod tests {
 
         if r0 > 1.2 {
             println!("  VERDICT: SUPERCRITICAL (R₀_eff = {:.3})", r0);
-            println!("  Refractory feedback insufficient — runaway propagation at {:.1}%", final_pct);
+            println!(
+                "  Refractory feedback insufficient — runaway propagation at {:.1}%",
+                final_pct
+            );
         } else if r0 > 0.8 && final_state.count > 0 && final_state.peak > 0.05 {
             println!("  VERDICT: CRITICAL — SELF-ORGANIZED (R₀_eff = {:.3})", r0);
-            println!("  Surprise wave sustained at {:.1}% via refractory negative feedback", final_pct);
-            println!("  Mean refractory: {:.4} (immune population fraction)", final_state.mean_refractory);
+            println!(
+                "  Surprise wave sustained at {:.1}% via refractory negative feedback",
+                final_pct
+            );
+            println!(
+                "  Mean refractory: {:.4} (immune population fraction)",
+                final_state.mean_refractory
+            );
         } else {
             println!("  VERDICT: SUBCRITICAL (R₀_eff = {:.3})", r0);
-            println!("  Surprise collapsed — wave could not sustain propagation", );
+            println!("  Surprise collapsed — wave could not sustain propagation",);
         }
 
         println!("  R₀_base: {:.3}", engine.propagation_config.r0_base());
         println!("  R₀_eff:  {:.3} (= R₀_base × (1 - mean_refractory))", r0);
-        println!("  Danger pheromone density: {:.4}", final_state.danger_density);
-        println!("  Final mean distance from origin: {:.1} units (σ={:.1})", final_state.mean_dist, final_state.std_dev);
+        println!(
+            "  Danger pheromone density: {:.4}",
+            final_state.danger_density
+        );
+        println!(
+            "  Final mean distance from origin: {:.1} units (σ={:.1})",
+            final_state.mean_dist, final_state.std_dev
+        );
         println!("  Peak surprise remaining: {:.4}", final_state.peak);
         println!("{}\n", sep);
     }
@@ -157,8 +190,19 @@ mod tests {
             }
         }
 
-        println!("{:<5} | {:<9} | {:<8} | {:<8} | {:<8} | {:<8} | {:<8} | {:<8} | {:<8} | {}",
-            "Tick", "Surprised", "Deaths", "MeanGen", "Decay", "Transfer", "Refract", "Danger", "Speed", "Time");
+        println!(
+            "{:<5} | {:<9} | {:<8} | {:<8} | {:<8} | {:<8} | {:<8} | {:<8} | {:<8} | {}",
+            "Tick",
+            "Surprised",
+            "Deaths",
+            "MeanGen",
+            "Decay",
+            "Transfer",
+            "Refract",
+            "Danger",
+            "Speed",
+            "Time"
+        );
         println!("{}", "-".repeat(130));
 
         for tick in 0..200 {
@@ -181,9 +225,12 @@ mod tests {
                 let dead = health.iter().filter(|&&h| h < 0.1).count();
                 let mean_gen: f64 = generation.iter().map(|&g| g as f64).sum::<f64>() / n as f64;
                 let mean_decay: f64 = gene_decay.iter().map(|&v| v as f64).sum::<f64>() / n as f64;
-                let mean_transfer: f64 = gene_transfer.iter().map(|&v| v as f64).sum::<f64>() / n as f64;
-                let mean_refract: f64 = gene_refractory.iter().map(|&v| v as f64).sum::<f64>() / n as f64;
-                let mean_danger: f64 = gene_danger.iter().map(|&v| v as f64).sum::<f64>() / n as f64;
+                let mean_transfer: f64 =
+                    gene_transfer.iter().map(|&v| v as f64).sum::<f64>() / n as f64;
+                let mean_refract: f64 =
+                    gene_refractory.iter().map(|&v| v as f64).sum::<f64>() / n as f64;
+                let mean_danger: f64 =
+                    gene_danger.iter().map(|&v| v as f64).sum::<f64>() / n as f64;
                 let mean_speed: f64 = gene_speed.iter().map(|&v| v as f64).sum::<f64>() / n as f64;
 
                 println!("{:<5} | {:<9} | {:<8} | {:<8} | {:<8} | {:<8} | {:<8} | {:<8} | {:<8} | {:.1}s",
@@ -204,10 +251,14 @@ mod tests {
         let generation = engine.pool.generation.as_slice();
 
         let mean_t: f64 = gene_transfer.iter().map(|&v| v as f64).sum::<f64>() / n as f64;
-        let var_t: f64 = gene_transfer.iter().map(|&v| {
-            let d = v as f64 - mean_t;
-            d * d
-        }).sum::<f64>() / n as f64;
+        let var_t: f64 = gene_transfer
+            .iter()
+            .map(|&v| {
+                let d = v as f64 - mean_t;
+                d * d
+            })
+            .sum::<f64>()
+            / n as f64;
         let std_t = var_t.sqrt();
 
         let max_gen = generation.iter().cloned().max().unwrap_or(0);
@@ -259,7 +310,11 @@ mod tests {
             }
         }
 
-        let mean_dist = if count > 0 { sum_dist / count as f64 } else { 0.0 };
+        let mean_dist = if count > 0 {
+            sum_dist / count as f64
+        } else {
+            0.0
+        };
         let mean_refractory = sum_refractory / n as f64;
 
         // Spatial std dev
@@ -274,7 +329,11 @@ mod tests {
                 }
             }
         }
-        let std_dev = if count > 1 { (sum_sq / (count - 1) as f64).sqrt() } else { 0.0 };
+        let std_dev = if count > 1 {
+            (sum_sq / (count - 1) as f64).sqrt()
+        } else {
+            0.0
+        };
 
         // Danger pheromone: sample mean density across grid
         let danger_density = {
@@ -285,7 +344,9 @@ mod tests {
             sum / ch_slice.len() as f64
         };
 
-        let r0_eff = engine.propagation_config.r0_effective(mean_refractory as f32);
+        let r0_eff = engine
+            .propagation_config
+            .r0_effective(mean_refractory as f32);
 
         SurpriseState {
             count,

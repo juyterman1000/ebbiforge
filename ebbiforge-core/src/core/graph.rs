@@ -1,4 +1,3 @@
-
 use crate::{HistoryBuffer, TrajectoryPoint};
 use pyo3::prelude::*;
 use std::sync::Arc;

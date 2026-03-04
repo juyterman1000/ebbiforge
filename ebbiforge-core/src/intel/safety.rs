@@ -99,10 +99,7 @@ impl Middleware for PredictiveSafetyShield {
         let (risk_score, reason) = self.analyze_risk(trajectory_json);
 
         if risk_score >= self.risk_threshold {
-            warn!(
-                "[SafetyShield] BLOCKING EXECUTION. Risk: {:.2}",
-                risk_score
-            );
+            warn!("[SafetyShield] BLOCKING EXECUTION. Risk: {:.2}", risk_score);
             if let Some(ref r) = reason {
                 warn!("   Reason: {}", r);
             }

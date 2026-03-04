@@ -10,20 +10,20 @@ pub const CELL_SIZE: f32 = 10.0; // 10x10 units per spatial cell
 /// L1/L2 cache locality during neighbor queries.
 pub struct SwarmPool {
     pub n_agents: usize,
-    
+
     // Core Physics (AVX2 loaded in 8-wide blocks)
     pub x: Vec<f32>,
     pub y: Vec<f32>,
     pub vx: Vec<f32>,
     pub vy: Vec<f32>,
-    
+
     // Cognitive States
     pub surprise: Vec<f32>,
     pub health: Vec<f32>,
     pub hidden_state: Vec<f32>, // Flat array: [N * 32]
-    
+
     // Spatial Hashing Metadata
-    pub cell_index: Vec<u32>,   // The morton code / hash index for spatial sorting
+    pub cell_index: Vec<u32>, // The morton code / hash index for spatial sorting
 }
 
 impl SwarmPool {
@@ -45,14 +45,15 @@ impl SwarmPool {
     /// This is step 1 of the cache-locality sorting algorithm.
     pub fn update_spatial_hashes(&mut self, world_width: f32) {
         let cols = (world_width / CELL_SIZE).ceil() as u32;
-        
-        self.x.par_iter()
+
+        self.x
+            .par_iter()
             .zip(&self.y)
             .zip(&mut self.cell_index)
             .for_each(|((x, y), cell)| {
-                 let cx = (*x / CELL_SIZE) as u32;
-                 let cy = (*y / CELL_SIZE) as u32;
-                 *cell = cy * cols + cx;
+                let cx = (*x / CELL_SIZE) as u32;
+                let cy = (*y / CELL_SIZE) as u32;
+                *cell = cy * cols + cx;
             });
     }
 
@@ -126,22 +127,29 @@ impl Default for UnifiedKernel {
             w_separation: 0.5,
             w_alignment: 0.1,
             w_memory: 0.8,
-            w_fear: 1.0,  
+            w_fear: 1.0,
         }
     }
 }
 
-pub fn run_unified_simd_physics(pool: &mut SwarmPool, kernel: &UnifiedKernel, pheromones: &PheromoneField, width: f32, height: f32) {
+pub fn run_unified_simd_physics(
+    pool: &mut SwarmPool,
+    kernel: &UnifiedKernel,
+    pheromones: &PheromoneField,
+    width: f32,
+    height: f32,
+) {
     // Pure unified physics processing, 100% population utilization.
     // Partition by blocks of agents to avoid false sharing in rayon, but process them linearly
     // Since memory is sorted by spatial hash, chunks of agents belong to same or nearby cells.
-    
+
     let chunk_size = 256;
     let _n = pool.n_agents;
-    
-    // We cannot easily borrow disjoint mutable slices of SoA arrays dynamically in safe rust without 
-    // using `par_chunks_mut()` on zipped iterators. 
-    pool.x.par_chunks_mut(chunk_size)
+
+    // We cannot easily borrow disjoint mutable slices of SoA arrays dynamically in safe rust without
+    // using `par_chunks_mut()` on zipped iterators.
+    pool.x
+        .par_chunks_mut(chunk_size)
         .zip(pool.y.par_chunks_mut(chunk_size))
         .zip(pool.vx.par_chunks_mut(chunk_size))
         .zip(pool.vy.par_chunks_mut(chunk_size))
@@ -151,7 +159,7 @@ pub fn run_unified_simd_physics(pool: &mut SwarmPool, kernel: &UnifiedKernel, ph
                 let y = &mut y_chunk[i];
                 let vx = &mut vx_chunk[i];
                 let vy = &mut vy_chunk[i];
-                
+
                 let (gx_mem, gy_mem) = pheromones.gradient(*x, *y, 2); // CH_2: Trail Marker
                 let (gx_fear, gy_fear) = pheromones.gradient(*x, *y, 1); // CH_1: Danger
 
@@ -167,7 +175,7 @@ pub fn run_unified_simd_physics(pool: &mut SwarmPool, kernel: &UnifiedKernel, ph
                     fy /= mag;
                 }
 
-                *vx = fx * 2.0; 
+                *vx = fx * 2.0;
                 *vy = fy * 2.0;
 
                 *x = (*x + *vx).clamp(0.0, width);

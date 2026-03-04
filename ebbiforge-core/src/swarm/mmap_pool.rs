@@ -25,8 +25,7 @@ impl<T: Copy + Default + Send + Sync> MmapArray<T> {
     pub fn new(len: usize) -> Self {
         let byte_len = len * mem::size_of::<T>();
         // Anonymous mmap: no file, OS pages to swap under pressure
-        let mmap = MmapMut::map_anon(byte_len.max(1))
-            .expect("Failed to create anonymous mmap");
+        let mmap = MmapMut::map_anon(byte_len.max(1)).expect("Failed to create anonymous mmap");
 
         Self {
             mmap,
@@ -38,23 +37,13 @@ impl<T: Copy + Default + Send + Sync> MmapArray<T> {
     /// Get an immutable slice of the entire array.
     #[inline]
     pub fn as_slice(&self) -> &[T] {
-        unsafe {
-            std::slice::from_raw_parts(
-                self.mmap.as_ptr() as *const T,
-                self.len,
-            )
-        }
+        unsafe { std::slice::from_raw_parts(self.mmap.as_ptr() as *const T, self.len) }
     }
 
     /// Get a mutable slice of the entire array.
     #[inline]
     pub fn as_mut_slice(&mut self) -> &mut [T] {
-        unsafe {
-            std::slice::from_raw_parts_mut(
-                self.mmap.as_mut_ptr() as *mut T,
-                self.len,
-            )
-        }
+        unsafe { std::slice::from_raw_parts_mut(self.mmap.as_mut_ptr() as *mut T, self.len) }
     }
 
     /// Fill the entire array with a value.
@@ -103,13 +92,13 @@ pub struct MmapSwarmPool {
     pub cell_index: MmapArray<u32>,
 
     // Evolvable genome (per-agent behavioral parameters)
-    pub gene_decay: MmapArray<f32>,          // surprise decay rate [0.8, 0.99]
-    pub gene_transfer: MmapArray<f32>,       // surprise transfer rate [0.01, 0.3]
-    pub gene_refractory: MmapArray<f32>,     // refractory buildup rate [0.05, 0.8]
-    pub gene_danger_sense: MmapArray<f32>,   // danger pheromone sensitivity [0.0, 0.5]
-    pub gene_novelty_drive: MmapArray<f32>,  // novelty attraction weight [0.0, 0.8]
-    pub gene_speed: MmapArray<f32>,          // max velocity [0.5, 5.0]
-    pub generation: MmapArray<u32>,          // lineage counter
+    pub gene_decay: MmapArray<f32>, // surprise decay rate [0.8, 0.99]
+    pub gene_transfer: MmapArray<f32>, // surprise transfer rate [0.01, 0.3]
+    pub gene_refractory: MmapArray<f32>, // refractory buildup rate [0.05, 0.8]
+    pub gene_danger_sense: MmapArray<f32>, // danger pheromone sensitivity [0.0, 0.5]
+    pub gene_novelty_drive: MmapArray<f32>, // novelty attraction weight [0.0, 0.8]
+    pub gene_speed: MmapArray<f32>, // max velocity [0.5, 5.0]
+    pub generation: MmapArray<u32>, // lineage counter
 }
 
 impl MmapSwarmPool {
@@ -154,9 +143,13 @@ impl MmapSwarmPool {
 
     /// Randomize agent positions within the world bounds.
     pub fn randomize_positions(&mut self, width: f32, height: f32) {
-        self.x.as_mut_slice().par_iter_mut()
+        self.x
+            .as_mut_slice()
+            .par_iter_mut()
             .for_each(|x| *x = rand::random::<f32>() * width);
-        self.y.as_mut_slice().par_iter_mut()
+        self.y
+            .as_mut_slice()
+            .par_iter_mut()
             .for_each(|y| *y = rand::random::<f32>() * height);
     }
 
@@ -169,7 +162,8 @@ impl MmapSwarmPool {
         let y_slice = self.y.as_slice();
         let cells = self.cell_index.as_mut_slice();
 
-        x_slice.par_iter()
+        x_slice
+            .par_iter()
             .zip(y_slice.par_iter())
             .zip(cells.par_iter_mut())
             .for_each(|((x, y), cell)| {
@@ -220,8 +214,10 @@ impl MmapSwarmPool {
             new_gene_decay.as_mut_slice()[new_idx] = self.gene_decay.as_slice()[old_idx];
             new_gene_transfer.as_mut_slice()[new_idx] = self.gene_transfer.as_slice()[old_idx];
             new_gene_refractory.as_mut_slice()[new_idx] = self.gene_refractory.as_slice()[old_idx];
-            new_gene_danger_sense.as_mut_slice()[new_idx] = self.gene_danger_sense.as_slice()[old_idx];
-            new_gene_novelty_drive.as_mut_slice()[new_idx] = self.gene_novelty_drive.as_slice()[old_idx];
+            new_gene_danger_sense.as_mut_slice()[new_idx] =
+                self.gene_danger_sense.as_slice()[old_idx];
+            new_gene_novelty_drive.as_mut_slice()[new_idx] =
+                self.gene_novelty_drive.as_slice()[old_idx];
             new_gene_speed.as_mut_slice()[new_idx] = self.gene_speed.as_slice()[old_idx];
             new_generation.as_mut_slice()[new_idx] = self.generation.as_slice()[old_idx];
         }

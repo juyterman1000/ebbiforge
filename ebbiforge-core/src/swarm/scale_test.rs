@@ -8,15 +8,16 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::swarm::mmap_pool::MmapSwarmPool;
     use crate::swarm::master_pipeline::SwarmEngineMaster;
+    use crate::swarm::mmap_pool::MmapSwarmPool;
     use std::time::Instant;
 
     fn get_rss_mb() -> f64 {
         if let Ok(status) = std::fs::read_to_string("/proc/self/status") {
             for line in status.lines() {
                 if line.starts_with("VmRSS:") {
-                    let kb: f64 = line.split_whitespace()
+                    let kb: f64 = line
+                        .split_whitespace()
                         .nth(1)
                         .and_then(|s| s.parse().ok())
                         .unwrap_or(0.0);
@@ -56,7 +57,12 @@ mod tests {
         pool.randomize_positions(10000.0, 10000.0);
         let t_rand = t1.elapsed();
         let sample = pool.x.as_slice()[50_000_000];
-        println!("  Time: {:?}  |  RSS: {:.1} MB  |  Sample: x={:.1}", t_rand, get_rss_mb(), sample);
+        println!(
+            "  Time: {:?}  |  RSS: {:.1} MB  |  Sample: x={:.1}",
+            t_rand,
+            get_rss_mb(),
+            sample
+        );
         assert!(sample > 0.0 && sample < 10000.0);
 
         // Spatial hash
@@ -69,7 +75,10 @@ mod tests {
         // Health decay
         println!("\n[5/5] Health decay on 100M agents...");
         let t3 = Instant::now();
-        pool.health.as_mut_slice().iter_mut().for_each(|h| *h *= 0.999);
+        pool.health
+            .as_mut_slice()
+            .iter_mut()
+            .for_each(|h| *h *= 0.999);
         let t_decay = t3.elapsed();
         let decayed = pool.health.as_slice()[0];
         println!("  Time: {:?}  |  Health: {:.6}", t_decay, decayed);
@@ -108,7 +117,8 @@ mod tests {
             for i in 0..engine.pool.n_agents {
                 let dx = x[i] - 500.0;
                 let dy = y[i] - 500.0;
-                if dx * dx + dy * dy < 2500.0 { // radius 50
+                if dx * dx + dy * dy < 2500.0 {
+                    // radius 50
                     surprise[i] = 1.0;
                     shocked += 1;
                 }
@@ -117,9 +127,17 @@ mod tests {
         }
 
         // Count agents with surprise before ticks
-        let surprised_before = engine.pool.surprise.as_slice()
-            .iter().filter(|s| **s > 0.1).count();
-        println!("  Agents with surprise > 0.1 BEFORE ticks: {}", surprised_before);
+        let surprised_before = engine
+            .pool
+            .surprise
+            .as_slice()
+            .iter()
+            .filter(|s| **s > 0.1)
+            .count();
+        println!(
+            "  Agents with surprise > 0.1 BEFORE ticks: {}",
+            surprised_before
+        );
 
         // Run 5 real ticks
         println!("\n[3/4] Running 5 real ticks...");
@@ -130,42 +148,85 @@ mod tests {
             let elapsed = t.elapsed();
             tick_times.push(elapsed);
 
-            let surprised = engine.pool.surprise.as_slice()
-                .iter().filter(|s| **s > 0.1).count();
-            println!("  Tick {}: {:?}  |  Surprised agents: {}", i + 1, elapsed, surprised);
+            let surprised = engine
+                .pool
+                .surprise
+                .as_slice()
+                .iter()
+                .filter(|s| **s > 0.1)
+                .count();
+            println!(
+                "  Tick {}: {:?}  |  Surprised agents: {}",
+                i + 1,
+                elapsed,
+                surprised
+            );
         }
 
         // Verify real state changes
         println!("\n[4/4] Verifying real physics...");
 
-        let surprised_after = engine.pool.surprise.as_slice()
-            .iter().filter(|s| **s > 0.1).count();
+        let surprised_after = engine
+            .pool
+            .surprise
+            .as_slice()
+            .iter()
+            .filter(|s| **s > 0.1)
+            .count();
 
         let health_sample = engine.pool.health.as_slice()[500_000];
         let x_sample = engine.pool.x.as_slice()[500_000];
-        let mean_vx: f32 = engine.pool.vx.as_slice().iter().map(|v| v.abs()).sum::<f32>()
+        let mean_vx: f32 = engine
+            .pool
+            .vx
+            .as_slice()
+            .iter()
+            .map(|v| v.abs())
+            .sum::<f32>()
             / engine.pool.n_agents as f32;
 
-        println!("  Surprised agents AFTER 5 ticks: {} (was {})", surprised_after, surprised_before);
-        println!("  Surprise propagated: {}", if surprised_after > surprised_before { "YES" } else { "NO" });
+        println!(
+            "  Surprised agents AFTER 5 ticks: {} (was {})",
+            surprised_after, surprised_before
+        );
+        println!(
+            "  Surprise propagated: {}",
+            if surprised_after > surprised_before {
+                "YES"
+            } else {
+                "NO"
+            }
+        );
         println!("  Health decayed:  {:.6} (expected ~0.995)", health_sample);
-        println!("  Mean |velocity|: {:.4} (should be > 0 if agents moved)", mean_vx);
+        println!(
+            "  Mean |velocity|: {:.4} (should be > 0 if agents moved)",
+            mean_vx
+        );
         println!("  Agent #500K at:  x={:.2}", x_sample);
 
         // Real assertions
         assert!(health_sample < 1.0, "Health must have decayed");
-        assert!(health_sample > 0.9, "Health shouldn't be zero after 5 ticks");
+        assert!(
+            health_sample > 0.9,
+            "Health shouldn't be zero after 5 ticks"
+        );
         assert!(mean_vx > 0.0, "Agents must have non-zero velocity");
 
-        let avg_ms = tick_times.iter().map(|t| t.as_millis()).sum::<u128>() as f64
-            / tick_times.len() as f64;
+        let avg_ms =
+            tick_times.iter().map(|t| t.as_millis()).sum::<u128>() as f64 / tick_times.len() as f64;
 
         println!("\n{}", sep);
         println!("  1M PIPELINE RESULT: PASSED");
-        println!("  Avg tick: {:.0} ms  |  RSS: {:.0} MB", avg_ms, get_rss_mb());
+        println!(
+            "  Avg tick: {:.0} ms  |  RSS: {:.0} MB",
+            avg_ms,
+            get_rss_mb()
+        );
         if surprised_after > surprised_before {
-            println!("  Surprise propagation: CONFIRMED ({} -> {} agents)",
-                surprised_before, surprised_after);
+            println!(
+                "  Surprise propagation: CONFIRMED ({} -> {} agents)",
+                surprised_before, surprised_after
+            );
         }
         println!("{}\n", sep);
     }
