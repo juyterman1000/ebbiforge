@@ -187,7 +187,9 @@ impl WorldModelConfig {
 
 impl Default for WorldModelConfig {
     fn default() -> Self {
-        Self::new(768, 8, 4, 0.001, 0.1, 64, (100, 100))
+        // World is 1000×1000 by default — matches test coordinate space and SwarmConfig default.
+        // (100,100) is far too small: test villages/cities at coords up to 900 would be unreachable.)
+        Self::new(768, 8, 4, 0.001, 0.1, 64, (1000, 1000))
     }
 }
 

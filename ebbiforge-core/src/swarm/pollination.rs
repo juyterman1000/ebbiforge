@@ -111,7 +111,7 @@ impl PollinatorState {
     }
 
     /// Sigmoid function to bound the raw eagerness cleanly between 0 and 1
-    fn update_probability(&mut self, _surprise_proxy: f32) {
+    pub(crate) fn update_probability(&mut self, _surprise_proxy: f32) {
         // Sigmoid mapping: 1 / (1 + e^(-x / T))
         self.share_probability =
             1.0 / (1.0 + (-self.raw_eagerness / self.sigmoid_temperature).exp());

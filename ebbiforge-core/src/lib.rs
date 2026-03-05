@@ -40,16 +40,34 @@ pub struct TrajectoryPoint {
     /// The generative thought or reasoning behind the action
     #[pyo3(get, set)]
     pub thought: String,
+    /// Timestamp in milliseconds (used by safety shield pattern matching)
+    #[pyo3(get, set)]
+    #[serde(default)]
+    pub timestamp_ms: u64,
 }
 
-#[pymethods]
 impl TrajectoryPoint {
-    #[new]
+    /// Internal Rust constructor (timestamp defaults to 0)
     pub fn new(step: u32, action: String, thought: String) -> Self {
         TrajectoryPoint {
             step,
             action,
             thought,
+            timestamp_ms: 0,
+        }
+    }
+}
+
+#[pymethods]
+impl TrajectoryPoint {
+    #[new]
+    #[pyo3(signature = (step, action, thought, timestamp_ms=0))]
+    pub fn py_new(step: u32, action: String, thought: String, timestamp_ms: u64) -> Self {
+        TrajectoryPoint {
+            step,
+            action,
+            thought,
+            timestamp_ms,
         }
     }
 }

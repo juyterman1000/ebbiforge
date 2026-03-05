@@ -1,0 +1,206 @@
+{
+  "test_name": "The Groundhog Day Test",
+  "timestamp": "2026-03-05T08:27:38.556653+00:00",
+  "overall_verdict": "PASS",
+  "test_a_safety_shield": {
+    "test": "Safety Shield Pattern Learning",
+    "iterations": 10,
+    "blocked_after_learning": 9,
+    "first_block_iteration": 1,
+    "expected_blocks": 9,
+    "false_positives_on_safe": 0,
+    "learning_effective": true,
+    "per_iteration": [
+      {
+        "iteration": 0,
+        "risk_score": 0.0,
+        "blocked": false,
+        "safe_trajectory_risk": 0.0,
+        "false_positive": false,
+        "patterns_loaded": 0
+      },
+      {
+        "iteration": 1,
+        "risk_score": 1.0,
+        "blocked": true,
+        "safe_trajectory_risk": 0.25,
+        "false_positive": false,
+        "patterns_loaded": 1
+      },
+      {
+        "iteration": 2,
+        "risk_score": 1.0,
+        "blocked": true,
+        "safe_trajectory_risk": 0.25,
+        "false_positive": false,
+        "patterns_loaded": 1
+      },
+      {
+        "iteration": 3,
+        "risk_score": 1.0,
+        "blocked": true,
+        "safe_trajectory_risk": 0.25,
+        "false_positive": false,
+        "patterns_loaded": 1
+      },
+      {
+        "iteration": 4,
+        "risk_score": 1.0,
+        "blocked": true,
+        "safe_trajectory_risk": 0.25,
+        "false_positive": false,
+        "patterns_loaded": 1
+      },
+      {
+        "iteration": 5,
+        "risk_score": 1.0,
+        "blocked": true,
+        "safe_trajectory_risk": 0.25,
+        "false_positive": false,
+        "patterns_loaded": 1
+      },
+      {
+        "iteration": 6,
+        "risk_score": 1.0,
+        "blocked": true,
+        "safe_trajectory_risk": 0.25,
+        "false_positive": false,
+        "patterns_loaded": 1
+      },
+      {
+        "iteration": 7,
+        "risk_score": 1.0,
+        "blocked": true,
+        "safe_trajectory_risk": 0.25,
+        "false_positive": false,
+        "patterns_loaded": 1
+      },
+      {
+        "iteration": 8,
+        "risk_score": 1.0,
+        "blocked": true,
+        "safe_trajectory_risk": 0.25,
+        "false_positive": false,
+        "patterns_loaded": 1
+      },
+      {
+        "iteration": 9,
+        "risk_score": 1.0,
+        "blocked": true,
+        "safe_trajectory_risk": 0.25,
+        "false_positive": false,
+        "patterns_loaded": 1
+      }
+    ]
+  },
+  "test_b_pollination_rl": {
+    "test": "PollinatorState TD(0) RL Divergence",
+    "initial_probability": 0.5,
+    "final_punished": 0.0675,
+    "final_rewarded": 0.9325,
+    "punished_delta": -0.4325,
+    "rewarded_delta": 0.4325,
+    "divergence_gap": 0.865,
+    "punished_shifted_meaningfully": true,
+    "rewarded_shifted_meaningfully": true,
+    "large_divergence": true,
+    "learning_effective": true,
+    "punished_history": [
+      {
+        "round": 0,
+        "prob": 0.4256
+      },
+      {
+        "round": 1,
+        "prob": 0.3564
+      },
+      {
+        "round": 2,
+        "prob": 0.2946
+      },
+      {
+        "round": 3,
+        "prob": 0.241
+      },
+      {
+        "round": 4,
+        "prob": 0.1958
+      },
+      {
+        "round": 5,
+        "prob": 0.1584
+      },
+      {
+        "round": 6,
+        "prob": 0.1278
+      },
+      {
+        "round": 7,
+        "prob": 0.1032
+      },
+      {
+        "round": 8,
+        "prob": 0.0833
+      },
+      {
+        "round": 9,
+        "prob": 0.0675
+      }
+    ],
+    "rewarded_history": [
+      {
+        "round": 0,
+        "prob": 0.5744
+      },
+      {
+        "round": 1,
+        "prob": 0.6436
+      },
+      {
+        "round": 2,
+        "prob": 0.7054
+      },
+      {
+        "round": 3,
+        "prob": 0.759
+      },
+      {
+        "round": 4,
+        "prob": 0.8042
+      },
+      {
+        "round": 5,
+        "prob": 0.8416
+      },
+      {
+        "round": 6,
+        "prob": 0.8722
+      },
+      {
+        "round": 7,
+        "prob": 0.8968
+      },
+      {
+        "round": 8,
+        "prob": 0.9167
+      },
+      {
+        "round": 9,
+        "prob": 0.9325
+      }
+    ]
+  },
+  "test_c_trajectory_divergence": {
+    "test": "Trajectory Divergence After Learning",
+    "agent1_risk": 0.0,
+    "agent1_blocked": false,
+    "agent2_risk": 1.0,
+    "agent2_blocked": true,
+    "agent2_block_reason": "Pattern matches historical failure agent1_m",
+    "agent3_safe_risk": 0.25,
+    "agent3_falsely_blocked": false,
+    "behavior_diverged": true,
+    "blocking_selective": true,
+    "learning_effective": true
+  }
+}
