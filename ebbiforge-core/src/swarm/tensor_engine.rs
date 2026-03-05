@@ -86,7 +86,12 @@ impl TensorSwarm {
             size
         );
 
-        let default_latent = LatentState::new(vec![0.0; w_cfg.latent_dim], "".to_string(), 0);
+        // Tier 3 (TensorSwarm) physics agents use a compact 16-dim latent vector.
+        // Full LLM latent dims (768) are only allocated at Tier 4 promotion (external).
+        // This is a 48× memory saving: 64 bytes/agent vs 3072 bytes/agent at 768-dim.
+        // At 1M active agents: 64 MB vs 3 GB — makes 10M-agent scale viable on a workstation.
+        const PHYSICS_LATENT_DIM: usize = 16;
+        let default_latent = LatentState::new(vec![0.0; PHYSICS_LATENT_DIM], "".to_string(), 0);
         // Seed PollinatorStates with small agent-specific initial biases so RL can diverge.
         // Without this, all agents have identical raw_eagerness=0 and converge to the same share_prob.
         let default_pollinator_fn = |i: usize| -> PollinatorState {
@@ -352,7 +357,7 @@ impl TensorSwarm {
                 },
             );
 
-        // Collect broadcaster positions
+        // Collect broadcaster positions (those who chose to share this tick)
         let broadcasters: Vec<(u32, f32, f32)> = self
             .ids
             .iter()
@@ -362,7 +367,7 @@ impl TensorSwarm {
             .filter_map(|(((id, x), y), b)| if *b { Some((*id, *x, *y)) } else { None })
             .collect();
 
-        // Collect promotions
+        // Collect promotions (agents ready for Tier 4 LLM reasoning)
         let new_promotions: Vec<u32> = self
             .ids
             .iter()
@@ -370,6 +375,26 @@ impl TensorSwarm {
             .filter_map(|(id, p)| if *p { Some(*id) } else { None })
             .collect();
         self.awaiting_promotions.extend(new_promotions);
+
+        // Build spatial grid of broadcasters for O(1) per-agent proximity lookup.
+        // Only built when trade locations or ambush zones are registered — the broadcaster
+        // proximity scan (register_share) only produces meaningful RL signal when there is
+        // geographic reward context. Without it, we'd do 353M HashMap insertions/tick at
+        // 1M-agent density with no signal value. This makes pollination O(N) at scale.
+        let proximity = 15.0f32;
+        let cell_size = proximity;
+        let broadcaster_grid: std::collections::HashMap<(i32, i32), Vec<(u32, f32, f32)>> =
+            if has_goals || !ambush_zones.is_empty() {
+                let mut grid = std::collections::HashMap::<(i32, i32), Vec<(u32, f32, f32)>>::new();
+                for (id, x, y) in broadcasters.iter() {
+                    let cx = (*x / cell_size).floor() as i32;
+                    let cy = (*y / cell_size).floor() as i32;
+                    grid.entry((cx, cy)).or_default().push((*id, *x, *y));
+                }
+                grid
+            } else {
+                std::collections::HashMap::<(i32, i32), Vec<(u32, f32, f32)>>::new() // Empty: skip proximity scan below
+            };
 
         // Pass 2: Network / RL Update + Pollination Altruism (only when RL is enabled)
         if rl_enabled {
@@ -386,16 +411,26 @@ impl TensorSwarm {
                         pollinator.apply_feedback(broker_id, *reward, global_tick);
                     }
 
-                    let proximity = 15.0f32; // Broadcast radius
-                    for (broker_id, bx, by) in broadcasters.iter() {
-                        let dx = *x - bx;
-                        let dy = *y - by;
-                        if dx * dx + dy * dy < proximity * proximity {
-                            pollinator.register_share(*broker_id, global_tick);
-                            // Altruism: broadcaster transfers a small resource to receiver.
-                            // Resources can then be sold at a city for +0.5 health.
-                            // This makes sharing indirectly beneficial for goal-directed agents.
-                            *boost += 0.005;
+                    // Spatial grid lookup: only check 3×3 neighborhood when grid is populated
+                    // (i.e., when geographic reward context makes credit assignment meaningful)
+                    if !broadcaster_grid.is_empty() {
+                        let cx = (*x / cell_size).floor() as i32;
+                        let cy = (*y / cell_size).floor() as i32;
+                        let prox2 = proximity * proximity;
+                        for dcx in -1..=1 {
+                            for dcy in -1..=1 {
+                                if let Some(cell_agents) = broadcaster_grid.get(&(cx + dcx, cy + dcy)) {
+                                    for (broker_id, bx, by) in cell_agents.iter() {
+                                        let dx = *x - bx;
+                                        let dy = *y - by;
+                                        if dx * dx + dy * dy < prox2 {
+                                            pollinator.register_share(*broker_id, global_tick);
+                                            // Altruism: resource transfer (sellable at cities)
+                                            *boost += 0.005;
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
 
