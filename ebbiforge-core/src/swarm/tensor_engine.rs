@@ -267,27 +267,31 @@ impl TensorSwarm {
                     // and reach cities (positive RL → altruists), others remain trapped
                     // near the ambush (negative RL → hoarders). This is what creates
                     // the behavioral polarization the architecture promises.
-                    let (dx_repulse, dy_repulse) = if rl_enabled && !ambush_zones.is_empty() && *surprise > 0.1 {
-                        // Find nearest ambush zone
-                        let mut best_az_d2 = f32::MAX;
-                        let mut repulse_x = 0.0f32;
-                        let mut repulse_y = 0.0f32;
-                        for (az_x, az_y) in ambush_zones.iter() {
-                            let dx = *x - az_x; // Away from ambush
-                            let dy = *y - az_y;
-                            let d2 = dx * dx + dy * dy;
-                            if d2 < best_az_d2 {
-                                best_az_d2 = d2;
-                                repulse_x = dx;
-                                repulse_y = dy;
+                    let (dx_repulse, dy_repulse) =
+                        if rl_enabled && !ambush_zones.is_empty() && *surprise > 0.1 {
+                            // Find nearest ambush zone
+                            let mut best_az_d2 = f32::MAX;
+                            let mut repulse_x = 0.0f32;
+                            let mut repulse_y = 0.0f32;
+                            for (az_x, az_y) in ambush_zones.iter() {
+                                let dx = *x - az_x; // Away from ambush
+                                let dy = *y - az_y;
+                                let d2 = dx * dx + dy * dy;
+                                if d2 < best_az_d2 {
+                                    best_az_d2 = d2;
+                                    repulse_x = dx;
+                                    repulse_y = dy;
+                                }
                             }
-                        }
-                        let repulse_dist = best_az_d2.sqrt().max(0.001);
-                        let repulse_weight = *surprise; // 0=no push, 1.0=max push
-                        (repulse_x / repulse_dist * repulse_weight, repulse_y / repulse_dist * repulse_weight)
-                    } else {
-                        (0.0, 0.0)
-                    };
+                            let repulse_dist = best_az_d2.sqrt().max(0.001);
+                            let repulse_weight = *surprise; // 0=no push, 1.0=max push
+                            (
+                                repulse_x / repulse_dist * repulse_weight,
+                                repulse_y / repulse_dist * repulse_weight,
+                            )
+                        } else {
+                            (0.0, 0.0)
+                        };
 
                     // Blend: goal direction + ambush repulsion + Brownian noise
                     // Surprise-high agents: repulsion dominates → flee ambush → reach city → rewarded
@@ -369,17 +373,16 @@ impl TensorSwarm {
                     *reward = if near_ambush {
                         -0.8 // Strong negative: being near danger is bad
                     } else if traded {
-                        1.0  // Positive: successful trade
+                        1.0 // Positive: successful trade
                     } else if *surprise > 0.8 {
-                        0.5  // Moderate positive: detecting anomalies is useful
+                        0.5 // Moderate positive: detecting anomalies is useful
                     } else {
                         -0.05 // Tiny negative: baseline cost of inaction
                     };
 
                     // Intent: broadcast context to nearby agents
                     if rl_enabled {
-                        *is_broadcasting =
-                            pollinator.should_pollinate(rand::random(), *surprise);
+                        *is_broadcasting = pollinator.should_pollinate(rand::random(), *surprise);
                     }
                 },
             );
@@ -420,7 +423,8 @@ impl TensorSwarm {
                 }
                 grid
             } else {
-                std::collections::HashMap::<(i32, i32), Vec<(u32, f32, f32)>>::new() // Empty: skip proximity scan below
+                std::collections::HashMap::<(i32, i32), Vec<(u32, f32, f32)>>::new()
+                // Empty: skip proximity scan below
             };
 
         // Pass 2: Network / RL Update + Pollination Altruism (only when RL is enabled)
@@ -446,7 +450,9 @@ impl TensorSwarm {
                         let prox2 = proximity * proximity;
                         for dcx in -1..=1 {
                             for dcy in -1..=1 {
-                                if let Some(cell_agents) = broadcaster_grid.get(&(cx + dcx, cy + dcy)) {
+                                if let Some(cell_agents) =
+                                    broadcaster_grid.get(&(cx + dcx, cy + dcy))
+                                {
                                     for (broker_id, bx, by) in cell_agents.iter() {
                                         let dx = *x - bx;
                                         let dy = *y - by;
@@ -514,7 +520,12 @@ impl TensorSwarm {
     }
 
     /// Force high surprise score on agents within a blast radius
-    pub fn apply_environmental_shock(&mut self, location: (f32, f32), radius: f32, intensity: f32) -> PyResult<()> {
+    pub fn apply_environmental_shock(
+        &mut self,
+        location: (f32, f32),
+        radius: f32,
+        intensity: f32,
+    ) -> PyResult<()> {
         if radius < 0.0 {
             return Err(PyValueError::new_err(format!(
                 "radius must be >= 0.0, got {}",

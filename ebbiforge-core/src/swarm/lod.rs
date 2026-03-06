@@ -171,7 +171,8 @@ impl ProductionTensorSwarm {
             let r2 = self.wavefront_radius * self.wavefront_radius;
 
             // Apply environmental shock at wavefront edge (internal: params always valid)
-            let _ = self.active
+            let _ = self
+                .active
                 .apply_environmental_shock(center, self.wavefront_radius, 0.8);
 
             // Wake dormant agents within wavefront radius
