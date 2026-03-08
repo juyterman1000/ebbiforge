@@ -49,7 +49,8 @@ Repository = "https://github.com/juyterman1000/entroly"
 "Full Framework" = "https://github.com/juyterman1000/ebbiforge"
 
 [project.scripts]
-entroly = "entroly._docker_launcher:launch"
+entroly = "entroly.cli:main"
+entroly-docker = "entroly._docker_launcher:launch"
 
 [tool.hatch.build.targets.wheel]
 packages = ["entroly"]

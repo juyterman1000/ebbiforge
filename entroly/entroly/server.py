@@ -30,6 +30,7 @@ import gc
 import json
 import logging
 import sys
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from .config import EntrolyConfig
@@ -962,11 +963,11 @@ def create_mcp_server():
         """Show the real, live value Entroly is providing to YOUR session right now.
 
         Pulls from actual engine state — not synthetic data. Shows:
-          💰 Money saved: exact $ amounts from token optimization
-          ⚡ Performance: sub-millisecond selection speed vs API latency
-          🧠 Bloat prevention: context compression ratio and memory footprint
-          🎯 Selection quality: per-fragment scoring and context sufficiency
-          🔒 Safety: duplicates caught, stale fragments filtered
+            Money saved: exact $ amounts from token optimization
+            Performance: sub-millisecond selection speed vs API latency
+            Bloat prevention: context compression ratio and memory footprint
+            Selection quality: per-fragment scoring and context sufficiency
+            Safety: duplicates caught, stale fragments filtered
 
         Call this anytime to see exactly what Entroly is doing for you.
         """
@@ -1368,7 +1369,7 @@ def create_mcp_server():
         data["symbols_changed"] = modal.metadata.get("symbols_changed", [])
         return json.dumps(data, indent=2)
 
-    return mcp
+    return mcp, engine
 
 
 
@@ -1427,7 +1428,19 @@ def main():
     from pathlib import Path
     engine_type = "Rust" if _RUST_AVAILABLE else "Python"
     logger.info(f"Starting Entroly MCP server v0.1.0 ({engine_type} engine)")
-    mcp = create_mcp_server()
+    mcp, engine = create_mcp_server()
+
+    # Auto-index the project on startup (zero config)
+    try:
+        from entroly.auto_index import auto_index
+        result = auto_index(engine)
+        if result["status"] == "indexed":
+            logger.info(
+                f"Auto-indexed {result['files_indexed']} files "
+                f"({result['total_tokens']:,} tokens) in {result['duration_s']}s"
+            )
+    except Exception as e:
+        logger.warning(f"Auto-index failed (non-fatal): {e}")
 
     # Start the autotune daemon in the background — zero config needed.
     # It reads/writes only tuning_config.json and runs at nice+10 priority.

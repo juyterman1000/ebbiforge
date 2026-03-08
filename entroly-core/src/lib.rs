@@ -47,6 +47,20 @@ use embeddings::{embed_text, cosine_similarity, embeddings_enabled};
 /// fragment IDs globally unique within a process (fixes multi-engine isolation).
 static INSTANCE_SEED: AtomicU64 = AtomicU64::new(1);
 
+/// Find the largest byte position ≤ `max_bytes` that is a valid char boundary.
+/// Prevents panics when slicing strings with multi-byte UTF-8 characters.
+#[inline]
+fn safe_truncate_pos(s: &str, max_bytes: usize) -> usize {
+    if max_bytes >= s.len() {
+        return s.len();
+    }
+    let mut pos = max_bytes;
+    while pos > 0 && !s.is_char_boundary(pos) {
+        pos -= 1;
+    }
+    pos
+}
+
 /// The core engine that orchestrates all subsystems.
 ///
 /// Modeled after ebbiforge-core HippocampusEngine:
@@ -809,7 +823,8 @@ impl EntrolyEngine {
                 let rel = compute_relevance(f, self.w_recency, self.w_frequency, self.w_semantic, self.w_entropy, fm);
                 d.set_item("relevance", (rel * 10000.0).round() / 10000.0)?;
                 let preview = if f.content.len() > 100 {
-                    format!("{}...", &f.content[..100])
+                    let end = safe_truncate_pos(&f.content, 100);
+                    format!("{}...", &f.content[..end])
                 } else {
                     f.content.clone()
                 };
@@ -829,7 +844,8 @@ impl EntrolyEngine {
                     let rel = compute_relevance(f, self.w_recency, self.w_frequency, self.w_semantic, self.w_entropy, fm);
                     d.set_item("relevance", (rel * 10000.0).round() / 10000.0)?;
                     let preview = if skel_content.len() > 100 {
-                        format!("{}...", &skel_content[..100])
+                        let end = safe_truncate_pos(skel_content, 100);
+                        format!("{}...", &skel_content[..end])
                     } else {
                         skel_content.clone()
                     };
