@@ -751,8 +751,7 @@ def create_mcp_server():
 
     mcp = FastMCP(
         "entroly",
-        version="0.1.0",
-        description=(
+        instructions=(
             "Information-theoretic context optimization for AI coding agents. "
             "Knapsack-optimal token budgeting, Shannon entropy scoring, "
             "SimHash deduplication, predictive pre-fetch, and checkpoint/resume."
@@ -1425,9 +1424,8 @@ def _start_autotune_daemon(engine: "EntrolyEngine") -> None:
 
 def main():
     """Entry point for the entroly MCP server."""
-    from pathlib import Path
     engine_type = "Rust" if _RUST_AVAILABLE else "Python"
-    logger.info(f"Starting Entroly MCP server v0.1.0 ({engine_type} engine)")
+    logger.info(f"Starting Entroly MCP server v0.2.0 ({engine_type} engine)")
     mcp, engine = create_mcp_server()
 
     # Auto-index the project on startup (zero config)

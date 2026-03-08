@@ -171,7 +171,6 @@ def auto_index(
     total_tokens = 0
     skipped_size = 0
     skipped_read = 0
-    sources = []
 
     for rel_path in indexable:
         abs_path = os.path.join(project_dir, rel_path)
@@ -210,7 +209,6 @@ def auto_index(
 
         indexed += 1
         total_tokens += tokens
-        sources.append(rel_path)
 
     elapsed = time.perf_counter() - t0
 

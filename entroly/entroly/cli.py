@@ -85,24 +85,26 @@ def _detect_ai_tool() -> dict:
             "config_key": "mcpServers",
         })
 
-    # Claude Desktop (global config)
-    system = platform.system()
-    if system == "Darwin":
-        claude_cfg = os.path.expanduser(
-            "~/Library/Application Support/Claude/claude_desktop_config.json"
-        )
-    elif system == "Windows":
-        claude_cfg = os.path.join(
-            os.environ.get("APPDATA", ""), "Claude", "claude_desktop_config.json"
-        )
-    else:
-        claude_cfg = os.path.expanduser("~/.config/claude/claude_desktop_config.json")
+    # Claude Desktop (global config) — only add if no project-local tool found
+    # Avoids overwriting global Claude config when user only uses Cursor/VS Code
+    if not tools:
+        system = platform.system()
+        if system == "Darwin":
+            claude_cfg = os.path.expanduser(
+                "~/Library/Application Support/Claude/claude_desktop_config.json"
+            )
+        elif system == "Windows":
+            claude_cfg = os.path.join(
+                os.environ.get("APPDATA", ""), "Claude", "claude_desktop_config.json"
+            )
+        else:
+            claude_cfg = os.path.expanduser("~/.config/claude/claude_desktop_config.json")
 
-    tools.append({
-        "name": "Claude Desktop",
-        "config_path": claude_cfg,
-        "config_key": "mcpServers",
-    })
+        tools.append({
+            "name": "Claude Desktop",
+            "config_path": claude_cfg,
+            "config_key": "mcpServers",
+        })
 
     return {"tools": tools, "primary": tools[0] if tools else None}
 
