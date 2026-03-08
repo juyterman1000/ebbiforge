@@ -45,6 +45,11 @@ pub struct ContextFragment {
     #[pyo3(get, set)]
     pub simhash: u64,
 
+    /// Optional dense embedding vector (384-dim when embeddings feature is enabled).
+    /// Used for cosine similarity in hybrid retrieval.
+    #[serde(default)]
+    pub embedding: Vec<f32>,
+
     // Hierarchical fragmentation: optional skeleton variant
     #[pyo3(get, set)]
     #[serde(default)]
@@ -95,6 +100,7 @@ impl ContextFragment {
             access_count: 0,
             is_pinned: false,
             simhash: 0,
+            embedding: Vec::new(),
             skeleton_content: None,
             skeleton_token_count: None,
             salience: 1.0,

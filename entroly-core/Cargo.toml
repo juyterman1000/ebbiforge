@@ -24,3 +24,11 @@ flate2 = "1.0"
 
 # Concurrency
 rayon = "1.8"
+
+# Optional: dense vector embeddings for hybrid retrieval
+# Enables 3-way scoring: SimHash + n-gram Jaccard + cosine embedding
+fastembed = { version = "4", optional = true, default-features = false }
+
+[features]
+default = []
+embeddings = ["fastembed"]

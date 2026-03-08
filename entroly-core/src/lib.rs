@@ -23,6 +23,7 @@ mod skeleton;
 mod sast;
 mod health;
 mod query;
+mod embeddings;
 
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
@@ -32,13 +33,14 @@ use serde::{Deserialize, Serialize};
 
 use fragment::{ContextFragment, compute_relevance};
 use knapsack::{knapsack_optimize, ScoringWeights};
-use entropy::{information_score, shannon_entropy, normalized_entropy, boilerplate_ratio};
+use entropy::{information_score, shannon_entropy, normalized_entropy, boilerplate_ratio, ngram_jaccard_similarity};
 use dedup::{simhash, hamming_distance, DedupIndex};
 use depgraph::{DepGraph, extract_identifiers};
 use guardrails::{file_criticality, has_safety_signal, TaskType, FeedbackTracker, Criticality, compute_ordering_priority, criticality_boost};
 use lsh::{LshIndex, ContextScorer};
 use prism::PrismOptimizer;
 use query::{analyze_query as query_analyze, refine_heuristic as query_refine};
+use embeddings::{embed_text, cosine_similarity, embeddings_enabled};
 
 /// Process-wide monotonic counter — used only to seed each engine's instance_id.
 /// Guarantees every EntrolyEngine instance gets a unique prefix, making
@@ -337,6 +339,9 @@ impl EntrolyEngine {
             frag.is_pinned = effective_pinned;
             frag.simhash = fp;
 
+            // Compute dense embedding (no-op when embeddings feature is disabled)
+            frag.embedding = embed_text(&content);
+
             // Criticality-aware salience (ported from ebbiforge's emotional tag multiplier).
             // Critical files start with higher salience → decay slower via Ebbinghaus.
             // Normal=1.0, Important=2.0, Critical=3.0, Safety=5.0
@@ -409,12 +414,31 @@ impl EntrolyEngine {
                 token_budget
             };
 
-            // Update semantic scores if query provided
+            // Hybrid semantic scoring (Pailitao-VL multi-view pattern, arXiv 2602.13704).
+            //
+            // Level 1: SimHash Hamming (65 discrete levels, O(1))
+            // Level 2: N-gram Jaccard (continuous [0,1], lexical)
+            // Level 3: Cosine embedding (continuous [0,1], semantic — optional)
+            //
+            // When embeddings enabled: 20% SimHash + 30% Jaccard + 50% Cosine
+            // Without embeddings:      40% SimHash + 60% Jaccard
+            let query_embedding = embed_text(&query);
             if !query.is_empty() {
                 let query_hash = simhash(&query);
                 for frag in self.fragments.values_mut() {
                     let dist = hamming_distance(query_hash, frag.simhash);
-                    frag.semantic_score = (1.0 - dist as f64 / 64.0).max(0.0);
+                    let simhash_sim = (1.0 - dist as f64 / 64.0).max(0.0);
+                    let ngram_sim = ngram_jaccard_similarity(&query, &frag.content);
+
+                    // 3-way hybrid blend when embeddings are available:
+                    //   SimHash 20% + Jaccard 30% + Cosine 50%
+                    // Fallback (no embeddings): SimHash 40% + Jaccard 60%
+                    if !frag.embedding.is_empty() && !query_embedding.is_empty() {
+                        let cosine_sim = cosine_similarity(&query_embedding, &frag.embedding);
+                        frag.semantic_score = (0.20 * simhash_sim + 0.30 * ngram_sim + 0.50 * cosine_sim).min(1.0);
+                    } else {
+                        frag.semantic_score = (0.4 * simhash_sim + 0.6 * ngram_sim).min(1.0);
+                    }
                 }
             }
 
@@ -529,6 +553,71 @@ impl EntrolyEngine {
                                 explored_ids.push(frags[explore_idx].fragment_id.clone());
                                 final_indices[pos] = explore_idx;
                                 self.total_explorations += 1;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ── Compare-Calibrate Redundancy Filter (Pailitao-VL pattern) ──
+            // After selection, check for redundant pairs among selected fragments.
+            // If two selected fragments have high n-gram overlap (>0.7), drop the
+            // lower-scored one and replace with the best unselected fragment.
+            // This ensures context diversity — the LLM gets complementary information.
+            if final_indices.len() >= 2 {
+                let selected_set: HashSet<usize> = final_indices.iter().copied().collect();
+                let mut unselected_by_rel: Vec<(usize, f64)> = (0..frags.len())
+                    .filter(|i| !selected_set.contains(i))
+                    .map(|i| {
+                        let fm = feedback_mults.get(&frags[i].fragment_id).copied().unwrap_or(1.0);
+                        let rel = compute_relevance(&frags[i], self.w_recency, self.w_frequency, self.w_semantic, self.w_entropy, fm);
+                        (i, rel)
+                    })
+                    .collect();
+                unselected_by_rel.sort_unstable_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+
+                // Check pairs (O(k²) where k = selected count, typically small)
+                let mut to_remove: Vec<usize> = Vec::new(); // positions in final_indices
+                for i in 0..final_indices.len() {
+                    if to_remove.contains(&i) { continue; }
+                    for j in (i + 1)..final_indices.len() {
+                        if to_remove.contains(&j) { continue; }
+                        let fi = &frags[final_indices[i]];
+                        let fj = &frags[final_indices[j]];
+                        // Skip pinned fragments
+                        if fi.is_pinned || fj.is_pinned { continue; }
+                        // Fast check: SimHash hamming < 8 means very similar structure
+                        let hamming = hamming_distance(fi.simhash, fj.simhash);
+                        if hamming < 8 {
+                            // Confirm with n-gram Jaccard (higher resolution)
+                            let jaccard = ngram_jaccard_similarity(&fi.content, &fj.content);
+                            if jaccard > 0.7 {
+                                // Drop the lower-scored one
+                                let fm_i = feedback_mults.get(&fi.fragment_id).copied().unwrap_or(1.0);
+                                let fm_j = feedback_mults.get(&fj.fragment_id).copied().unwrap_or(1.0);
+                                let rel_i = compute_relevance(fi, self.w_recency, self.w_frequency, self.w_semantic, self.w_entropy, fm_i);
+                                let rel_j = compute_relevance(fj, self.w_recency, self.w_frequency, self.w_semantic, self.w_entropy, fm_j);
+                                to_remove.push(if rel_i <= rel_j { i } else { j });
+                            }
+                        }
+                    }
+                }
+
+                // Replace redundant fragments with best unselected alternatives
+                if !to_remove.is_empty() {
+                    to_remove.sort_unstable();
+                    to_remove.dedup();
+                    let mut replacement_idx = 0;
+                    for &pos in to_remove.iter().rev() {
+                        // Find a replacement that fits the token budget
+                        while replacement_idx < unselected_by_rel.len() {
+                            let (repl_frag_idx, _) = unselected_by_rel[replacement_idx];
+                            let old_tokens = frags[final_indices[pos]].token_count;
+                            let new_tokens = frags[repl_frag_idx].token_count;
+                            replacement_idx += 1;
+                            if new_tokens <= old_tokens + 200 { // 200 token slack
+                                final_indices[pos] = repl_frag_idx;
+                                break;
                             }
                         }
                     }
@@ -1071,6 +1160,80 @@ impl EntrolyEngine {
         self.cumulative_tokens_used = state.cumulative_tokens_used;
         self.last_optimization = None;
         Ok(())
+    }
+
+    /// Persist the full engine state to a gzip-compressed JSON file.
+    ///
+    /// Transforms Entroly from session-scoped to repository-scoped:
+    /// the MCP server can call this on shutdown to save all fragments,
+    /// LSH index, dep graph, and feedback weights, then load_index()
+    /// on next startup for instant warm retrieval.
+    ///
+    /// File format: gzip(JSON), typically 10-50x smaller than raw JSON.
+    /// Compatible with import_state() for manual inspection of uncompressed JSON.
+    pub fn persist_index(&self, path: &str) -> PyResult<()> {
+        use std::fs;
+        use std::io::Write;
+        use flate2::Compression;
+        use flate2::write::GzEncoder;
+
+        let json = self.export_state()?;
+
+        // Ensure parent directory exists
+        if let Some(parent) = std::path::Path::new(path).parent() {
+            fs::create_dir_all(parent).map_err(|e| {
+                pyo3::exceptions::PyIOError::new_err(format!("Cannot create directory: {}", e))
+            })?;
+        }
+
+        let file = fs::File::create(path).map_err(|e| {
+            pyo3::exceptions::PyIOError::new_err(format!("Cannot create index file: {}", e))
+        })?;
+        let mut encoder = GzEncoder::new(file, Compression::fast());
+        encoder.write_all(json.as_bytes()).map_err(|e| {
+            pyo3::exceptions::PyIOError::new_err(format!("Compression failed: {}", e))
+        })?;
+        encoder.finish().map_err(|e| {
+            pyo3::exceptions::PyIOError::new_err(format!("Finalization failed: {}", e))
+        })?;
+        Ok(())
+    }
+
+    /// Load engine state from a gzip-compressed JSON index file.
+    ///
+    /// Restores a previous session's full state: fragments, LSH index,
+    /// dep graph, feedback weights, turn counter, and all statistics.
+    /// The engine is immediately ready for optimize()/recall() calls.
+    ///
+    /// Returns Ok(true) if index was loaded, Ok(false) if file doesn't exist.
+    pub fn load_index(&mut self, path: &str) -> PyResult<bool> {
+        use std::io::Read;
+        use flate2::read::GzDecoder;
+
+        let file = match std::fs::File::open(path) {
+            Ok(f) => f,
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(false),
+            Err(e) => return Err(pyo3::exceptions::PyIOError::new_err(
+                format!("Cannot open index file: {}", e)
+            )),
+        };
+        let mut decoder = GzDecoder::new(file);
+        let mut json = String::new();
+        decoder.read_to_string(&mut json).map_err(|e| {
+            pyo3::exceptions::PyIOError::new_err(format!("Decompression failed: {}", e))
+        })?;
+        self.import_state(&json)?;
+
+        // Rebuild LSH index from restored fragments
+        self.lsh_index = LshIndex::new();
+        self.fragment_slot_ids.clear();
+        for (fid, frag) in &self.fragments {
+            let slot = self.fragment_slot_ids.len();
+            self.fragment_slot_ids.push(fid.clone());
+            self.lsh_index.insert(frag.simhash, slot);
+        }
+
+        Ok(true)
     }
 
     /// Set the exploration rate (0.0 = pure exploitation, 1.0 = always explore).

@@ -172,6 +172,21 @@ class EntrolyEngine:
         # during the first auto-checkpoint (which could happen mid-session).
         self._validate_checkpoint_dir()
 
+        # ── Persistent Repo-Level Indexing ──
+        # On startup, try to load a previous session's index for instant warm retrieval.
+        # Index is stored at <checkpoint_dir>/index.json.gz (gzip-compressed JSON).
+        self._index_path = str(Path(self.config.checkpoint_dir) / "index.json.gz")
+        if self._use_rust:
+            try:
+                loaded = self._rust.load_index(self._index_path)
+                if loaded:
+                    n = self._rust.fragment_count()
+                    logger.info(f"Loaded persistent index: {n} fragments from {self._index_path}")
+                else:
+                    logger.info("No persistent index found, starting fresh session")
+            except Exception as e:
+                logger.warning(f"Failed to load persistent index: {e}")
+
         # GC freeze at startup: Python's cyclic GC causes ~500ms stalls on large
         # heaps. Freeze all existing long-lived objects and disable automatic
         # collection. We manually collect every N tool calls in advance_turn()
@@ -429,6 +444,11 @@ class EntrolyEngine:
             }
             # Export full engine state (not empty fragments)
             engine_state = self._rust.export_state()
+            # Auto-persist repo-level index alongside checkpoint
+            try:
+                self._rust.persist_index(self._index_path)
+            except Exception as e:
+                logger.warning(f"Failed to persist index: {e}")
             return self._checkpoint_mgr.save(
                 fragments=[],
                 dedup_fingerprints={},

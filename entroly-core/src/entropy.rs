@@ -253,6 +253,66 @@ pub fn information_score(
     score.clamp(0.0, 1.0)
 }
 
+/// Word-level n-gram Jaccard similarity between two texts.
+///
+/// Computes |intersection(ngrams_a, ngrams_b)| / |union(ngrams_a, ngrams_b)|
+/// using adaptive multi-scale n-grams (same weighting as cross_fragment_redundancy).
+///
+/// Returns [0, 1]: 0.0 = completely different · 1.0 = identical.
+///
+/// Inspired by Pailitao-VL (arXiv 2602.13704) multi-view scoring:
+/// SimHash gives only 65 discrete similarity levels (hamming 0..64).
+/// N-gram Jaccard gives continuous similarity with much higher resolution,
+/// especially for code where shared identifiers/keywords matter.
+pub fn ngram_jaccard_similarity(text_a: &str, text_b: &str) -> f64 {
+    if text_a.is_empty() || text_b.is_empty() {
+        return 0.0;
+    }
+
+    let words_a: Vec<&str> = text_a.split_whitespace().collect();
+    let words_b: Vec<&str> = text_b.split_whitespace().collect();
+    let min_words = words_a.len().min(words_b.len());
+
+    if min_words < 2 {
+        // Fallback to unigram Jaccard for very short texts
+        let set_a: HashSet<&str> = words_a.into_iter().collect();
+        let set_b: HashSet<&str> = words_b.into_iter().collect();
+        let intersection = set_a.intersection(&set_b).count();
+        let union = set_a.union(&set_b).count();
+        return if union == 0 { 0.0 } else { intersection as f64 / union as f64 };
+    }
+
+    // Adaptive weights by fragment size (same as cross_fragment_redundancy)
+    let (w2, w3, w4) = if min_words < 20 {
+        (0.55, 0.35, 0.10)
+    } else if min_words < 100 {
+        (0.25, 0.50, 0.25)
+    } else {
+        (0.15, 0.35, 0.50)
+    };
+
+    let j2 = if min_words >= 2 { ngram_jaccard(&words_a, &words_b, 2) } else { 0.0 };
+    let j3 = if min_words >= 3 { ngram_jaccard(&words_a, &words_b, 3) } else { j2 };
+    let j4 = if min_words >= 4 { ngram_jaccard(&words_a, &words_b, 4) } else { j3 };
+
+    (w2 * j2 + w3 * j3 + w4 * j4).clamp(0.0, 1.0)
+}
+
+/// Jaccard similarity for a single n-gram scale.
+fn ngram_jaccard(words_a: &[&str], words_b: &[&str], n: usize) -> f64 {
+    let set_a: HashSet<&[&str]> = words_a.windows(n).collect();
+    let set_b: HashSet<&[&str]> = words_b.windows(n).collect();
+
+    if set_a.is_empty() && set_b.is_empty() {
+        return 0.0;
+    }
+
+    let intersection = set_a.intersection(&set_b).count();
+    let union = set_a.union(&set_b).count();
+
+    if union == 0 { 0.0 } else { intersection as f64 / union as f64 }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -303,5 +363,40 @@ mod tests {
         let r = cross_fragment_redundancy(&base, &[&other]);
         // Very different 4-grams despite reuse of fn/common words
         assert!(r < 0.3, "Distinct long fragments should score < 0.3, got {r:.3}");
+    }
+
+    #[test]
+    fn test_ngram_jaccard_identical() {
+        let text = "fn connect_to_database host port Connection result";
+        let j = ngram_jaccard_similarity(text, text);
+        assert!((j - 1.0).abs() < 0.01, "Identical text should give ~1.0, got {j}");
+    }
+
+    #[test]
+    fn test_ngram_jaccard_different() {
+        let a = "fn connect_to_database host port Connection result";
+        let b = "struct UserProfile name age email address country";
+        let j = ngram_jaccard_similarity(a, b);
+        assert!(j < 0.2, "Unrelated texts should score low, got {j}");
+    }
+
+    #[test]
+    fn test_ngram_jaccard_partial_overlap() {
+        let a = "fn process_payment amount currency exchange rate";
+        let b = "fn process_payment amount discount apply tax";
+        let j = ngram_jaccard_similarity(a, b);
+        // Shared prefix "fn process_payment amount" → partial overlap
+        assert!(j > 0.1 && j < 0.8, "Partial overlap should be moderate, got {j}");
+    }
+
+    #[test]
+    fn test_ngram_jaccard_higher_resolution_than_simhash() {
+        // Two texts that SimHash might hash to the same fingerprint
+        // but n-gram Jaccard correctly distinguishes
+        let a = "fn validate_email address format check domain";
+        let b = "fn validate_password strength check requirements";
+        let j = ngram_jaccard_similarity(a, b);
+        // These share "fn validate" and "check" but are otherwise different
+        assert!(j < 0.5, "Similar-looking but different functions should score < 0.5, got {j}");
     }
 }
