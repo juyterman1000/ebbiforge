@@ -5,8 +5,8 @@ use crate::core::tools::{execute_tool, get_tool_definitions, ToolResult};
 use crate::{HistoryBuffer, TrajectoryPoint};
 use pyo3::prelude::*;
 use serde_json::json;
-use std::collections::HashMap;
 use std::sync::{Arc, Mutex, OnceLock};
+use std::collections::HashMap;
 use tokio::runtime::Runtime;
 use tokio::task::AbortHandle;
 use tracing::info;
@@ -17,29 +17,25 @@ static SHARED_RUNTIME: OnceLock<Arc<Runtime>> = OnceLock::new();
 static SHARED_CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
 
 fn get_shared_runtime() -> Arc<Runtime> {
-    SHARED_RUNTIME
-        .get_or_init(|| {
-            Arc::new(
-                tokio::runtime::Builder::new_multi_thread()
-                    .enable_all()
-                    .build()
-                    .expect("Failed to create global tokio runtime"),
-            )
-        })
-        .clone()
+    SHARED_RUNTIME.get_or_init(|| {
+        Arc::new(
+            tokio::runtime::Builder::new_multi_thread()
+                .enable_all()
+                .build()
+                .expect("Failed to create global tokio runtime")
+        )
+    }).clone()
 }
 
 fn get_shared_client() -> reqwest::Client {
-    SHARED_CLIENT
-        .get_or_init(|| {
-            reqwest::Client::builder()
-                .timeout(std::time::Duration::from_secs(30))
-                .gzip(true)
-                .brotli(true)
-                .build()
-                .expect("Failed to create global reqwest client")
-        })
-        .clone()
+    SHARED_CLIENT.get_or_init(|| {
+        reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(30))
+            .gzip(true)
+            .brotli(true)
+            .build()
+            .expect("Failed to create global reqwest client")
+    }).clone()
 }
 
 /// Orchestrates the lifecycle of an AI agent within the middleware pipeline.
@@ -142,16 +138,15 @@ impl AgentGraph {
         // Model fallback list - Optimized based on live quota (gemini-3-flash has 0 usage)
         let fallback_models = vec![
             "gemini-2.0-flash", // Per User Request
-            "gemma-3-27b-it",   // High Quota (30 RPM) - Primary
-            "gemma-3-12b-it",   // High Quota (30 RPM)
+            "gemma-3-27b-it", // High Quota (30 RPM) - Primary
+            "gemma-3-12b-it", // High Quota (30 RPM)
             "gemini-2.1-flash-lite",
             "gemini-3-flash",
             "gemini-2.5-flash",
         ];
 
-        let base_url = env::var("MODEL_BASE_URL").unwrap_or_else(|_| {
-            "https://generativelanguage.googleapis.com/v1beta/models".to_string()
-        });
+        let base_url = env::var("MODEL_BASE_URL")
+            .unwrap_or_else(|_| "https://generativelanguage.googleapis.com/v1beta/models".to_string());
         let tool_defs = get_tool_definitions();
 
         let max_iterations = 15;
@@ -466,14 +461,9 @@ impl AgentGraphPy {
         buffer: &HistoryBuffer,
         agent_name: Option<String>,
     ) -> PyResult<EbbiforgeContext> {
-        self.inner
-            .runtime
-            .block_on(async {
-                self.inner
-                    .run_task(&task_id, buffer, agent_name.as_deref())
-                    .await
-            })
-            .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e))
+        self.inner.runtime.block_on(async {
+            self.inner.run_task(&task_id, buffer, agent_name.as_deref()).await
+        }).map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e))
     }
 
     /// Spawns a background task execution cycle with ReAct loop (Non-Blocking).
@@ -488,24 +478,22 @@ impl AgentGraphPy {
         let task_name = task_id.clone();
         let agent = agent_name.clone();
         let buf = buffer.clone();
-
+        
         let config = self.inner.config.clone();
         let tasks_map = self.inner.active_tasks.clone();
         let handle_task_id = task_id.clone();
-
+        
         // Spawn onto the existing tokio thread pool as a lightweight Future
         // preventing OS-level Thread Exhaustion (os error 11)
         let handle = self.inner.runtime.spawn(async move {
             let inner_graph = crate::core::runner::AgentGraph::with_config(config);
-            let _ = inner_graph
-                .run_task(&task_name, &buf, agent.as_deref())
-                .await;
-
+            let _ = inner_graph.run_task(&task_name, &buf, agent.as_deref()).await;
+            
             // Cleanup on finish
             let mut map = tasks_map.lock().unwrap();
             map.remove(&task_name);
         });
-
+        
         {
             let mut map = self.inner.active_tasks.lock().unwrap();
             // Prevent race condition: if future already finished instantly (e.g. auth error), don't resurrect its ID.
@@ -513,11 +501,11 @@ impl AgentGraphPy {
                 map.insert(handle_task_id, handle.abort_handle());
             }
         }
-
+        
         Ok(())
     }
 
-    /// Hard kills a task mid-flight, aborting the async tokio future instantly.
+    /// Hard kills a task mid-flight, aborting the async tokio future instantly. 
     /// This causes the agent to "die" without warning, preventing further tool calls or LLM requests.
     pub fn kill_task(&self, task_id: String) -> PyResult<bool> {
         let mut map = self.inner.active_tasks.lock().unwrap();
@@ -527,7 +515,7 @@ impl AgentGraphPy {
         }
         Ok(false)
     }
-
+    
     /// Returns the number of currently active task futures.
     pub fn active_task_count(&self) -> usize {
         let map = self.inner.active_tasks.lock().unwrap();

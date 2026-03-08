@@ -73,8 +73,7 @@ impl Default for EbbiforgeConfig {
                 1. ALWAYS use web_search to find current data (stock prices, distances, etc.)\n\
                 2. Use calculate for any math\n\
                 3. Call finish(answer) when you have the final answer\n\
-                4. DO NOT say 'I cannot access real-time data' - use the tools!"
-                .to_string(),
+                4. DO NOT say 'I cannot access real-time data' - use the tools!".to_string(),
         }
     }
 }

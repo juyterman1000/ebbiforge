@@ -1,0 +1,10 @@
+{
+  "_comment": "This is the ONLY file the autotuner modifies (single-file mutation discipline).",
+  "weight_recency": 0.3,
+  "weight_frequency": 0.25,
+  "weight_semantic_sim": 0.25,
+  "weight_entropy": 0.2,
+  "decay_half_life_turns": 15,
+  "min_relevance_threshold": 0.05,
+  "exploration_rate": 0.1
+}

@@ -1,0 +1,41 @@
+{
+  "_comment": "Single-file mutation target for Entroly's autotuner. The autotuner modifies ONLY this file. The benchmark harness and Rust core are read-only.",
+  "weights": {
+    "recency": 0.3,
+    "frequency": 0.25,
+    "semantic_sim": 0.25,
+    "entropy": 0.2
+  },
+  "decay": {
+    "half_life_turns": 15,
+    "min_relevance_threshold": 0.05
+  },
+  "dedup": {
+    "similarity_threshold": 0.92,
+    "hamming_threshold": 3
+  },
+  "knapsack": {
+    "quantization_bins": 1000,
+    "exploration_rate": 0.1
+  },
+  "prefetch": {
+    "depth": 2,
+    "max_fragments": 10
+  },
+  "sliding_window": {
+    "short_window_multiplier": 1.0,
+    "long_window_fraction": 0.25
+  },
+  "prism": {
+    "learning_rate": 0.01,
+    "beta": 0.95,
+    "initial_residual_lambda": 0.1
+  },
+  "autotuner": {
+    "enabled": true,
+    "budget_seconds": 10,
+    "perturbation_scale": 0.05,
+    "min_delta_to_keep": 0.001,
+    "recall_window_size": 500
+  }
+}

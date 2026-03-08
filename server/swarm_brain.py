@@ -48,6 +48,8 @@ try:
         # Layer 4: Memory + World Model
         MemoryConsolidator,        # Ebbinghaus forgetting + reconsolidation
         ConsolidatedMemory,        # Memory entry with decay
+        HippocampusEngine,         # Brain-inspired associative memory (LSH + Ebbinghaus)
+        MemoryBankConfig,          # Disk-backed storage config
         PlanningEngine,            # Autoregressive prediction
         LatentEncoder,             # State→latent vector
         AutoregressivePredictor,   # Latent→future prediction
@@ -170,7 +172,16 @@ class SwarmBrain:
         self.trust_store = TrustStore()              # Multi-agent trust chain
 
         # ── Layer 4: Memory ──
-        self.memory = MemoryConsolidator()           # Ebbinghaus forgetting
+        self.memory = MemoryConsolidator()           # Ebbinghaus forgetting (legacy)
+        # HippocampusEngine: associative recall with LSH + context scoring
+        # Replaces brute-force memory lookups with sub-μs semantic search.
+        # Key value: recall-before-LLM — avoid redundant API calls.
+        self.hippocampus = HippocampusEngine(
+            capacity=500_000,       # 500K episodes in RAM
+            sdm_locations=10_000,   # Kanerva SDM for permanent memories
+            consolidation_interval=50,
+            recall_reinforcement=1.3,
+        )
         self.planner = PlanningEngine()              # Autoregressive prediction
         self.metacognition = MetaCognition()         # Insight generation
         self.curiosity = CuriosityModule()           # Novel challenge detection
@@ -226,6 +237,14 @@ class SwarmBrain:
         # Record in memory with Ebbinghaus scoring
         memory_text = f"Signal: {source}={value:.4f} (weight={surprise_weight:.2f}) at tick {self.tick_count}"
         self.memory.consolidate("swarm-brain", [json.dumps({"signal": source, "value": value, "tick": self.tick_count})])
+        # Also store in HippocampusEngine for associative recall
+        salience = min(surprise_weight * 50.0, 90.0)
+        self.hippocampus.remember(
+            memory_text,
+            salience=salience,
+            source=source,
+            emotional_tag=3 if surprise_weight > 0.8 else 2 if surprise_weight > 0.5 else 0,
+        )
 
     def tick(self):
         """Run one simulation tick — the full FEEL→EXPLAIN→REMEMBER pipeline."""
@@ -255,8 +274,13 @@ class SwarmBrain:
         alerts = self._check_thresholds(metrics)
 
         # ── REMEMBER: Consolidate memory (Ebbinghaus) ──
+        self.hippocampus.tick()  # Advance memory clock + auto-consolidation
         if self.tick_count % 100 == 0:
             self.memory.consolidate("swarm-brain", [json.dumps({"tick": self.tick_count, "type": "periodic"})])
+            self.hippocampus.remember(
+                f"Periodic checkpoint at tick {self.tick_count}: surprise={metrics.get('mean_surprise', 0):.4f}",
+                salience=5.0, source="periodic",
+            )
 
         # ── EXPLAIN: If alert triggered, generate LLM explanation ──
         for alert in alerts:
@@ -276,6 +300,10 @@ class SwarmBrain:
                 # Store insights in consolidated memory for future explanation context
                 for insight in insights:
                     self.memory.consolidate("swarm-brain", [json.dumps({"type": "insight", "data": str(insight), "tick": self.tick_count})])
+                    self.hippocampus.remember(
+                        f"Insight: {str(insight)}",
+                        salience=40.0, source="metacognition", emotional_tag=1,
+                    )
 
         # ── CURIOSITY: Generate novel challenges ──
         if self.tick_count % 1000 == 0:
@@ -288,6 +316,10 @@ class SwarmBrain:
                     0.05  # Weak probe — curiosity, not alarm
                 )
                 self.memory.consolidate("swarm-brain", [json.dumps({"type": "curiosity", "challenge": str(challenge), "tick": self.tick_count})])
+                self.hippocampus.remember(
+                    f"Curiosity challenge: {str(challenge)}",
+                    salience=15.0, source="curiosity",
+                )
 
         # Update tracking
         self.last_surprise = metrics.get("mean_surprise", 0.0)
@@ -314,12 +346,31 @@ class SwarmBrain:
         return alerts
 
     def _generate_explanation(self, alert: SwarmAlert, metrics: Dict) -> str:
-        """Layer 2: Use LLM to explain what the swarm is sensing."""
+        """Layer 2: Use LLM to explain what the swarm is sensing.
+        
+        RECALL-BEFORE-LLM: Check if we've explained a similar alert before.
+        If so, return the cached explanation — saves ~$0.01 per call.
+        """
+        # ── RECALL-BEFORE-LLM: Check memory for similar past explanations ──
+        query = f"{alert.alert_type} {alert.explanation}"
+        past_memories = self.hippocampus.recall(query, top_k=1)
+        if past_memories:
+            best = past_memories[0]
+            # If we have a highly relevant, recent memory, use it
+            if best.retention > 0.3 and best.recall_count > 0:
+                return f"[FROM MEMORY — {best.recall_count}× recalled] {best.content}"
+
         if not self.api_key:
             return "No API key — cannot generate explanation"
 
         # Use AdaptivePruner to build optimal context
-        memory_context = str(self.memory.get_memories("swarm-brain")[:10])  # Last 10 consolidated memories
+        memory_context = str(self.memory.get_memories("swarm-brain")[:10])
+        # Add hippocampus recall for richer context
+        hippo_context = self.hippocampus.recall(query, top_k=3)
+        if hippo_context:
+            memory_context += "\n\nASSOCIATIVE RECALL (similar past events):\n"
+            for m in hippo_context:
+                memory_context += f"  - [{m.retention*100:.0f}% retained] {m.content}\n"
 
         # Build the context assembly (Layer 2 architecture)
         prompt = f"""You are the VOICE of a swarm intelligence system.
@@ -349,7 +400,16 @@ Be specific about the data. No hype. No jargon. Just clarity."""
             url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key={self.api_key}"
             r = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]}, timeout=30)
             r.raise_for_status()
-            return r.json()['candidates'][0]['content']['parts'][0]['text']
+            explanation = r.json()['candidates'][0]['content']['parts'][0]['text']
+
+            # REMEMBER the explanation for future recall-before-LLM
+            self.hippocampus.remember(
+                f"LLM explanation for {alert.alert_type}: {explanation[:200]}",
+                salience=60.0,
+                source="llm_explanation",
+                emotional_tag=3 if alert.severity == 'critical' else 2,
+            )
+            return explanation
         except Exception as e:
             return f"LLM error: {e}"
 
@@ -377,6 +437,10 @@ Be specific about the data. No hype. No jargon. Just clarity."""
             # Memory/metacognition — graceful fallback
             try:
                 state["memory_entries"] = self.memory.total_trajectories("swarm-brain")
+                state["hippocampus_episodes"] = self.hippocampus.episode_count
+                stats = self.hippocampus.stats()
+                state["hippocampus_recalls"] = stats.total_recalls
+                state["hippocampus_consolidated"] = stats.consolidated_count
             except:
                 state["memory_entries"] = 0
             try:

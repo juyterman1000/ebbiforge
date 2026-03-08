@@ -47,55 +47,45 @@ def _demo():
         print("❌ Rust core not available. Build with: maturin develop --release")
         sys.exit(1)
 
-    import time
-
     print("🐝 Ebbiforge Interactive Demo")
-    print("=" * 56)
-    print("10,000 agents | Ebbinghaus memory | TD-RL caste emergence")
-    print("=" * 56)
-    print()
+    print("=" * 50)
+    print("Initializing 10,000 agents...\n")
 
-    swarm = cogops.TensorSwarm(agent_count=10_000)
+    swarm = cogops.TensorSwarm(agent_count=10000)
     swarm.register_locations(
-        villages=[(200.0, 200.0), (700.0, 300.0)],
-        towns=[],
-        cities=[(800.0, 800.0)],
-        ambush_zones=[(200.0, 200.0)],  # Village overlaps ambush → RL pressure
+        villages=[(100, 200), (400, 500), (700, 300)],
+        towns=[(250, 400), (600, 600)],
+        cities=[(500, 500)],
+        ambush_zones=[(300, 350)],
     )
-    # Seed initial surprise so Ebbinghaus memory kicks in from tick 1
-    swarm.apply_environmental_shock(location=(200.0, 200.0), radius=250.0, intensity=0.8)
 
-    print(f"  {'TICK':>4}  {'ms':>5}  {'Surprise':>9}  {'Altruists':>9}  {'Hoarders':>8}  {'Health':>6}")
-    print(f"  {'─'*4}  {'─'*5}  {'─'*9}  {'─'*9}  {'─'*8}  {'─'*6}")
-    shock_done = False
-
-    for tick in range(300):
+    import time
+    for tick in range(500):
         start = time.time()
         swarm.tick()
         elapsed = (time.time() - start) * 1000
 
-        if tick == 200 and not shock_done:
-            swarm.apply_environmental_shock(location=(500.0, 500.0), radius=200.0, intensity=1.0)
-            print(f"\n  ⚡ SURPRISE CASCADE at (500,500) — watching RL caste response...\n")
-            shock_done = True
-
         if tick % 50 == 0:
-            health  = swarm.get_all_health()
-            sp      = swarm.get_all_share_probabilities()
-            metrics = swarm.sample_population_metrics()
-            mean_h  = sum(health) / max(len(health), 1)
-            mean_s  = metrics["mean_surprise_score"]
-            altruists = sum(1 for p in sp if p > 0.7)
-            hoarders  = sum(1 for p in sp if p < 0.3)
+            health = swarm.health
+            mean_h = sum(health) / len(health) if health else 0
+            surprise = swarm.surprise_scores
+            mean_s = sum(surprise) / len(surprise) if surprise else 0
             print(
-                f"  {tick:>4}  {elapsed:>4.1f}ms  {mean_s:>9.4f}  "
-                f"{altruists:>9}  {hoarders:>8}  {mean_h:>6.3f}"
+                f"  Tick {tick:>4} | "
+                f"{elapsed:>5.1f}ms | "
+                f"Health: {mean_h:.3f} | "
+                f"Surprise: {mean_s:.4f}"
             )
 
-    print()
-    print("✅ Demo complete — 500 ticks, 10,000 agents, $0.00 API cost.")
-    print("   Try: ebbiforge example quickstart   ← proof of every core claim")
-    print("   Try: ebbiforge benchmark            ← raw throughput numbers")
+        # Inject a surprise at tick 200
+        if tick == 200:
+            print("\n  ⚡ INJECTING SURPRISE CASCADE at (500, 500)!\n")
+            swarm.apply_environmental_shock(
+                location=(500, 500), radius=10, intensity=1.0
+            )
+
+    print("\n✅ Demo complete. 500 ticks, 10,000 agents.")
+    print("   Run 'ebbiforge example evolution' for evolution demo.")
 
 
 def _benchmark():
@@ -144,7 +134,6 @@ def _example(name: str):
 
     # Map short names to files
     example_map = {
-        "quickstart": "00_quickstart.py",
         "hello": "01_hello_swarm.py",
         "evolution": "02_evolution.py",
         "live": "03_live_data.py",
@@ -191,7 +180,7 @@ def main():
     elif cmd == "example":
         if len(args) < 2:
             print("Usage: ebbiforge example <name>")
-            print("Available: quickstart, hello, evolution, live, reasoning, compliance")
+            print("Available: hello, evolution, live, reasoning, compliance")
             return
         _example(args[1])
     else:

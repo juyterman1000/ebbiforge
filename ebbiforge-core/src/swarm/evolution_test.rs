@@ -27,42 +27,12 @@ mod tests {
         let n = engine.pool.n_agents;
 
         for i in 0..n {
-            assert_eq!(
-                engine.pool.gene_decay.as_slice()[i],
-                0.92,
-                "gene_decay[{}]",
-                i
-            );
-            assert_eq!(
-                engine.pool.gene_transfer.as_slice()[i],
-                0.08,
-                "gene_transfer[{}]",
-                i
-            );
-            assert_eq!(
-                engine.pool.gene_refractory.as_slice()[i],
-                0.3,
-                "gene_refractory[{}]",
-                i
-            );
-            assert_eq!(
-                engine.pool.gene_danger_sense.as_slice()[i],
-                0.15,
-                "gene_danger_sense[{}]",
-                i
-            );
-            assert_eq!(
-                engine.pool.gene_novelty_drive.as_slice()[i],
-                0.2,
-                "gene_novelty_drive[{}]",
-                i
-            );
-            assert_eq!(
-                engine.pool.gene_speed.as_slice()[i],
-                2.0,
-                "gene_speed[{}]",
-                i
-            );
+            assert_eq!(engine.pool.gene_decay.as_slice()[i], 0.92, "gene_decay[{}]", i);
+            assert_eq!(engine.pool.gene_transfer.as_slice()[i], 0.08, "gene_transfer[{}]", i);
+            assert_eq!(engine.pool.gene_refractory.as_slice()[i], 0.3, "gene_refractory[{}]", i);
+            assert_eq!(engine.pool.gene_danger_sense.as_slice()[i], 0.15, "gene_danger_sense[{}]", i);
+            assert_eq!(engine.pool.gene_novelty_drive.as_slice()[i], 0.2, "gene_novelty_drive[{}]", i);
+            assert_eq!(engine.pool.gene_speed.as_slice()[i], 2.0, "gene_speed[{}]", i);
             assert_eq!(engine.pool.generation.as_slice()[i], 0, "generation[{}]", i);
         }
     }
@@ -83,92 +53,29 @@ mod tests {
         }
 
         // Record sums before sort
-        let sum_decay_before: f64 = engine
-            .pool
-            .gene_decay
-            .as_slice()
-            .iter()
-            .map(|&v| v as f64)
-            .sum();
-        let sum_transfer_before: f64 = engine
-            .pool
-            .gene_transfer
-            .as_slice()
-            .iter()
-            .map(|&v| v as f64)
-            .sum();
-        let sum_speed_before: f64 = engine
-            .pool
-            .gene_speed
-            .as_slice()
-            .iter()
-            .map(|&v| v as f64)
-            .sum();
-        let sum_gen_before: u64 = engine
-            .pool
-            .generation
-            .as_slice()
-            .iter()
-            .map(|&v| v as u64)
-            .sum();
+        let sum_decay_before: f64 = engine.pool.gene_decay.as_slice().iter().map(|&v| v as f64).sum();
+        let sum_transfer_before: f64 = engine.pool.gene_transfer.as_slice().iter().map(|&v| v as f64).sum();
+        let sum_speed_before: f64 = engine.pool.gene_speed.as_slice().iter().map(|&v| v as f64).sum();
+        let sum_gen_before: u64 = engine.pool.generation.as_slice().iter().map(|&v| v as u64).sum();
 
         // Sort
         engine.pool.update_spatial_hashes(100.0);
         engine.pool.sort_by_spatial_hash();
 
         // Verify sums preserved
-        let sum_decay_after: f64 = engine
-            .pool
-            .gene_decay
-            .as_slice()
-            .iter()
-            .map(|&v| v as f64)
-            .sum();
-        let sum_transfer_after: f64 = engine
-            .pool
-            .gene_transfer
-            .as_slice()
-            .iter()
-            .map(|&v| v as f64)
-            .sum();
-        let sum_speed_after: f64 = engine
-            .pool
-            .gene_speed
-            .as_slice()
-            .iter()
-            .map(|&v| v as f64)
-            .sum();
-        let sum_gen_after: u64 = engine
-            .pool
-            .generation
-            .as_slice()
-            .iter()
-            .map(|&v| v as u64)
-            .sum();
+        let sum_decay_after: f64 = engine.pool.gene_decay.as_slice().iter().map(|&v| v as f64).sum();
+        let sum_transfer_after: f64 = engine.pool.gene_transfer.as_slice().iter().map(|&v| v as f64).sum();
+        let sum_speed_after: f64 = engine.pool.gene_speed.as_slice().iter().map(|&v| v as f64).sum();
+        let sum_gen_after: u64 = engine.pool.generation.as_slice().iter().map(|&v| v as u64).sum();
 
-        assert!(
-            (sum_decay_before - sum_decay_after).abs() < 0.01,
-            "gene_decay sum changed: {} -> {}",
-            sum_decay_before,
-            sum_decay_after
-        );
-        assert!(
-            (sum_transfer_before - sum_transfer_after).abs() < 0.01,
-            "gene_transfer sum changed: {} -> {}",
-            sum_transfer_before,
-            sum_transfer_after
-        );
-        assert!(
-            (sum_speed_before - sum_speed_after).abs() < 0.01,
-            "gene_speed sum changed: {} -> {}",
-            sum_speed_before,
-            sum_speed_after
-        );
-        assert_eq!(
-            sum_gen_before, sum_gen_after,
-            "generation sum changed: {} -> {}",
-            sum_gen_before, sum_gen_after
-        );
+        assert!((sum_decay_before - sum_decay_after).abs() < 0.01,
+            "gene_decay sum changed: {} -> {}", sum_decay_before, sum_decay_after);
+        assert!((sum_transfer_before - sum_transfer_after).abs() < 0.01,
+            "gene_transfer sum changed: {} -> {}", sum_transfer_before, sum_transfer_after);
+        assert!((sum_speed_before - sum_speed_after).abs() < 0.01,
+            "gene_speed sum changed: {} -> {}", sum_speed_before, sum_speed_after);
+        assert_eq!(sum_gen_before, sum_gen_after,
+            "generation sum changed: {} -> {}", sum_gen_before, sum_gen_after);
     }
 
     /// Evolution disabled must produce identical physics to pre-v4.0 behavior.
@@ -189,16 +96,10 @@ mod tests {
         }
 
         // Genes must be completely unchanged
-        assert_eq!(
-            engine.pool.gene_decay.as_slice(),
-            decay_before.as_slice(),
-            "gene_decay changed with evolution disabled!"
-        );
-        assert_eq!(
-            engine.pool.generation.as_slice(),
-            gen_before.as_slice(),
-            "generation changed with evolution disabled!"
-        );
+        assert_eq!(engine.pool.gene_decay.as_slice(), decay_before.as_slice(),
+            "gene_decay changed with evolution disabled!");
+        assert_eq!(engine.pool.generation.as_slice(), gen_before.as_slice(),
+            "generation changed with evolution disabled!");
     }
 
     /// With evolution enabled but no surprise, agents eventually die (health decays).
@@ -267,13 +168,7 @@ mod tests {
         }
 
         // All agents should still be dead (no parents available)
-        let alive = engine
-            .pool
-            .health
-            .as_slice()
-            .iter()
-            .filter(|&&h| h > 0.5)
-            .count();
+        let alive = engine.pool.health.as_slice().iter().filter(|&&h| h > 0.5).count();
         println!("Alive after mass extinction: {} (expected 0)", alive);
         // It's acceptable if some got randomly paired with each other before all died
     }
@@ -311,44 +206,18 @@ mod tests {
             let novelty = engine.pool.gene_novelty_drive.as_slice()[i];
             let speed = engine.pool.gene_speed.as_slice()[i];
 
-            assert!(
-                decay >= GENE_RANGES[0].0 && decay <= GENE_RANGES[0].1,
-                "gene_decay[{}] = {} out of range [{}, {}]",
-                i,
-                decay,
-                GENE_RANGES[0].0,
-                GENE_RANGES[0].1
-            );
-            assert!(
-                transfer >= GENE_RANGES[1].0 && transfer <= GENE_RANGES[1].1,
-                "gene_transfer[{}] = {} out of range",
-                i,
-                transfer
-            );
-            assert!(
-                refract >= GENE_RANGES[2].0 && refract <= GENE_RANGES[2].1,
-                "gene_refractory[{}] = {} out of range",
-                i,
-                refract
-            );
-            assert!(
-                danger >= GENE_RANGES[3].0 && danger <= GENE_RANGES[3].1,
-                "gene_danger_sense[{}] = {} out of range",
-                i,
-                danger
-            );
-            assert!(
-                novelty >= GENE_RANGES[4].0 && novelty <= GENE_RANGES[4].1,
-                "gene_novelty_drive[{}] = {} out of range",
-                i,
-                novelty
-            );
-            assert!(
-                speed >= GENE_RANGES[5].0 && speed <= GENE_RANGES[5].1,
-                "gene_speed[{}] = {} out of range",
-                i,
-                speed
-            );
+            assert!(decay >= GENE_RANGES[0].0 && decay <= GENE_RANGES[0].1,
+                "gene_decay[{}] = {} out of range [{}, {}]", i, decay, GENE_RANGES[0].0, GENE_RANGES[0].1);
+            assert!(transfer >= GENE_RANGES[1].0 && transfer <= GENE_RANGES[1].1,
+                "gene_transfer[{}] = {} out of range", i, transfer);
+            assert!(refract >= GENE_RANGES[2].0 && refract <= GENE_RANGES[2].1,
+                "gene_refractory[{}] = {} out of range", i, refract);
+            assert!(danger >= GENE_RANGES[3].0 && danger <= GENE_RANGES[3].1,
+                "gene_danger_sense[{}] = {} out of range", i, danger);
+            assert!(novelty >= GENE_RANGES[4].0 && novelty <= GENE_RANGES[4].1,
+                "gene_novelty_drive[{}] = {} out of range", i, novelty);
+            assert!(speed >= GENE_RANGES[5].0 && speed <= GENE_RANGES[5].1,
+                "gene_speed[{}] = {} out of range", i, speed);
         }
     }
 
@@ -389,44 +258,14 @@ mod tests {
             let refractory = engine.pool.refractory.as_slice();
 
             for i in 0..engine.pool.n_agents {
-                assert!(
-                    !surprise[i].is_nan(),
-                    "NaN surprise at agent {} tick {}",
-                    i,
-                    tick
-                );
-                assert!(
-                    !surprise[i].is_infinite(),
-                    "Inf surprise at agent {} tick {}",
-                    i,
-                    tick
-                );
-                assert!(
-                    surprise[i] >= 0.0 && surprise[i] < 1.0,
-                    "surprise[{}] = {} out of [0, 1) at tick {}",
-                    i,
-                    surprise[i],
-                    tick
-                );
-                assert!(
-                    !health[i].is_nan(),
-                    "NaN health at agent {} tick {}",
-                    i,
-                    tick
-                );
-                assert!(
-                    !refractory[i].is_nan(),
-                    "NaN refractory at agent {} tick {}",
-                    i,
-                    tick
-                );
-                assert!(
-                    refractory[i] >= 0.0 && refractory[i] <= 1.0,
-                    "refractory[{}] = {} out of [0, 1] at tick {}",
-                    i,
-                    refractory[i],
-                    tick
-                );
+                assert!(!surprise[i].is_nan(), "NaN surprise at agent {} tick {}", i, tick);
+                assert!(!surprise[i].is_infinite(), "Inf surprise at agent {} tick {}", i, tick);
+                assert!(surprise[i] >= 0.0 && surprise[i] < 1.0,
+                    "surprise[{}] = {} out of [0, 1) at tick {}", i, surprise[i], tick);
+                assert!(!health[i].is_nan(), "NaN health at agent {} tick {}", i, tick);
+                assert!(!refractory[i].is_nan(), "NaN refractory at agent {} tick {}", i, tick);
+                assert!(refractory[i] >= 0.0 && refractory[i] <= 1.0,
+                    "refractory[{}] = {} out of [0, 1] at tick {}", i, refractory[i], tick);
             }
         }
     }
@@ -461,30 +300,15 @@ mod tests {
             let surprise = engine.pool.surprise.as_slice();
             for i in 0..engine.pool.n_agents {
                 assert!(!surprise[i].is_nan(), "NaN at agent {} tick {}", i, tick);
-                assert!(
-                    surprise[i] >= 0.0,
-                    "Negative surprise at agent {} tick {}",
-                    i,
-                    tick
-                );
+                assert!(surprise[i] >= 0.0, "Negative surprise at agent {} tick {}", i, tick);
             }
         }
 
         // Surprise should have decayed to near zero
-        let mean_s: f64 = engine
-            .pool
-            .surprise
-            .as_slice()
-            .iter()
-            .map(|&v| v as f64)
-            .sum::<f64>()
+        let mean_s: f64 = engine.pool.surprise.as_slice().iter().map(|&v| v as f64).sum::<f64>()
             / engine.pool.n_agents as f64;
         println!("Mean surprise after 30 ticks (subcritical): {:.6}", mean_s);
-        assert!(
-            mean_s < 0.1,
-            "Subcritical genes should collapse surprise, got {}",
-            mean_s
-        );
+        assert!(mean_s < 0.1, "Subcritical genes should collapse surprise, got {}", mean_s);
     }
 
     /// Health reward must only activate when evolution is enabled AND surprise > threshold.
@@ -501,11 +325,7 @@ mod tests {
         }
         let health_no_evo = engine.pool.health.as_slice()[0];
         // Should be 1.0 * 0.999^10 ≈ 0.990
-        assert!(
-            health_no_evo < 0.995,
-            "Health should decay: {}",
-            health_no_evo
-        );
+        assert!(health_no_evo < 0.995, "Health should decay: {}", health_no_evo);
 
         // Reset and enable evolution
         let mut engine2 = SwarmEngineMaster::new(100, 100.0, 100.0);
@@ -519,10 +339,7 @@ mod tests {
         }
         let health_with_evo = engine2.pool.health.as_slice()[0];
         // With +0.01 reward and -0.001 decay per tick, health should be higher
-        println!(
-            "Health without evo: {:.4}, with evo: {:.4}",
-            health_no_evo, health_with_evo
-        );
+        println!("Health without evo: {:.4}, with evo: {:.4}", health_no_evo, health_with_evo);
         // Note: surprise decays so the reward may not apply every tick, but initially it should
     }
 
@@ -554,13 +371,8 @@ mod tests {
 
         for i in 0..engine.pool.n_agents {
             let mag = (vx[i] * vx[i] + vy[i] * vy[i]).sqrt();
-            assert!(
-                mag <= speed[i] + 0.01,
-                "Agent {} velocity {:.3} exceeds gene_speed {:.3}",
-                i,
-                mag,
-                speed[i]
-            );
+            assert!(mag <= speed[i] + 0.01,
+                "Agent {} velocity {:.3} exceeds gene_speed {:.3}", i, mag, speed[i]);
         }
     }
 
@@ -591,18 +403,10 @@ mod tests {
         let x = engine.pool.x.as_slice();
         let y = engine.pool.y.as_slice();
         for i in 0..engine.pool.n_agents {
-            assert!(
-                x[i] >= 0.0 && x[i] <= 100.0,
-                "Agent {} x={} out of world bounds",
-                i,
-                x[i]
-            );
-            assert!(
-                y[i] >= 0.0 && y[i] <= 100.0,
-                "Agent {} y={} out of world bounds",
-                i,
-                y[i]
-            );
+            assert!(x[i] >= 0.0 && x[i] <= 100.0,
+                "Agent {} x={} out of world bounds", i, x[i]);
+            assert!(y[i] >= 0.0 && y[i] <= 100.0,
+                "Agent {} y={} out of world bounds", i, y[i]);
         }
     }
 
@@ -612,7 +416,7 @@ mod tests {
         let mut engine = SwarmEngineMaster::new(500, 100.0, 100.0);
         engine.evolution_config = SwarmEvolutionConfig {
             enabled: true,
-            death_threshold: 0.5,     // aggressive death threshold
+            death_threshold: 0.5, // aggressive death threshold
             reproduction_interval: 1, // every tick
             mutation_sigma: 0.02,
             health_reward: 0.0, // no reward = everyone eventually dies
@@ -663,13 +467,7 @@ mod tests {
             let s = engine.pool.surprise.as_slice();
             for i in 0..engine.pool.n_agents {
                 assert!(!s[i].is_nan(), "NaN at agent {} tick {}", i, tick);
-                assert!(
-                    s[i] >= 0.0 && s[i] < 1.0,
-                    "surprise[{}] = {} at tick {}",
-                    i,
-                    s[i],
-                    tick
-                );
+                assert!(s[i] >= 0.0 && s[i] < 1.0, "surprise[{}] = {} at tick {}", i, s[i], tick);
             }
         }
     }
@@ -723,10 +521,8 @@ mod tests {
             }
         }
 
-        println!(
-            "{:<5} | {:<9} | {:<8} | {:<8} | {:<8} | {:<8} | {:<8} | {}",
-            "Tick", "Surprised", "Dead", "MeanGen", "Decay", "Transfer", "Speed", "Time"
-        );
+        println!("{:<5} | {:<9} | {:<8} | {:<8} | {:<8} | {:<8} | {:<8} | {}",
+            "Tick", "Surprised", "Dead", "MeanGen", "Decay", "Transfer", "Speed", "Time");
         println!("{}", "-".repeat(100));
 
         let t_total = Instant::now();
@@ -749,32 +545,16 @@ mod tests {
             let gene_speed = engine.pool.gene_speed.as_slice();
 
             for i in 0..n {
-                if surprise[i].is_nan() {
-                    nan_count += 1;
-                }
-                if surprise[i].is_infinite() {
-                    inf_count += 1;
-                }
-                if surprise[i] < 0.0 || surprise[i] >= 1.0 {
-                    oob_count += 1;
-                }
-                if health[i].is_nan() {
-                    nan_count += 1;
-                }
-                if refractory[i].is_nan() {
-                    nan_count += 1;
-                }
+                if surprise[i].is_nan() { nan_count += 1; }
+                if surprise[i].is_infinite() { inf_count += 1; }
+                if surprise[i] < 0.0 || surprise[i] >= 1.0 { oob_count += 1; }
+                if health[i].is_nan() { nan_count += 1; }
+                if refractory[i].is_nan() { nan_count += 1; }
 
                 // Gene bounds
-                if gene_decay[i] < GENE_RANGES[0].0 || gene_decay[i] > GENE_RANGES[0].1 {
-                    oob_count += 1;
-                }
-                if gene_transfer[i] < GENE_RANGES[1].0 || gene_transfer[i] > GENE_RANGES[1].1 {
-                    oob_count += 1;
-                }
-                if gene_speed[i] < GENE_RANGES[5].0 || gene_speed[i] > GENE_RANGES[5].1 {
-                    oob_count += 1;
-                }
+                if gene_decay[i] < GENE_RANGES[0].0 || gene_decay[i] > GENE_RANGES[0].1 { oob_count += 1; }
+                if gene_transfer[i] < GENE_RANGES[1].0 || gene_transfer[i] > GENE_RANGES[1].1 { oob_count += 1; }
+                if gene_speed[i] < GENE_RANGES[5].0 || gene_speed[i] > GENE_RANGES[5].1 { oob_count += 1; }
             }
 
             if tick % 10 == 0 {
@@ -783,21 +563,16 @@ mod tests {
                 let dead = health.iter().filter(|&&h| h < 0.1).count();
                 let mean_gen: f64 = generation.iter().map(|&g| g as f64).sum::<f64>() / n as f64;
                 let mean_decay: f64 = gene_decay.iter().map(|&v| v as f64).sum::<f64>() / n as f64;
-                let mean_transfer: f64 =
-                    gene_transfer.iter().map(|&v| v as f64).sum::<f64>() / n as f64;
+                let mean_transfer: f64 = gene_transfer.iter().map(|&v| v as f64).sum::<f64>() / n as f64;
                 let mean_speed: f64 = gene_speed.iter().map(|&v| v as f64).sum::<f64>() / n as f64;
 
-                println!(
-                    "{:<5} | {:<9} | {:<8} | {:<8} | {:<8} | {:<8} | {:<8} | {:.1}s",
-                    tick + 1,
-                    surprised,
-                    dead,
+                println!("{:<5} | {:<9} | {:<8} | {:<8} | {:<8} | {:<8} | {:<8} | {:.1}s",
+                    tick + 1, surprised, dead,
                     format!("{:.2}", mean_gen),
                     format!("{:.4}", mean_decay),
                     format!("{:.4}", mean_transfer),
                     format!("{:.3}", mean_speed),
-                    elapsed.as_secs_f64()
-                );
+                    elapsed.as_secs_f64());
             }
         }
 
@@ -806,34 +581,19 @@ mod tests {
         println!("\n{}", sep);
         println!("  STRESS TEST RESULTS");
         println!("{}", sep);
-        println!(
-            "  Total time: {:.1}s ({:.0}ms/tick avg)",
-            total_time.as_secs_f64(),
-            total_time.as_millis() as f64 / 100.0
-        );
+        println!("  Total time: {:.1}s ({:.0}ms/tick avg)", total_time.as_secs_f64(), total_time.as_millis() as f64 / 100.0);
         println!("  NaN violations: {}", nan_count);
         println!("  Inf violations: {}", inf_count);
         println!("  Out-of-bounds violations: {}", oob_count);
 
-        let max_gen = engine
-            .pool
-            .generation
-            .as_slice()
-            .iter()
-            .cloned()
-            .max()
-            .unwrap_or(0);
+        let max_gen = engine.pool.generation.as_slice().iter().cloned().max().unwrap_or(0);
         println!("  Max generation reached: {}", max_gen);
         println!("{}\n", sep);
 
         assert_eq!(nan_count, 0, "NaN values detected!");
         assert_eq!(inf_count, 0, "Inf values detected!");
         assert_eq!(oob_count, 0, "Out-of-bounds values detected!");
-        assert!(
-            max_gen > 0,
-            "Evolution should have produced offspring (max_gen={})",
-            max_gen
-        );
+        assert!(max_gen > 0, "Evolution should have produced offspring (max_gen={})", max_gen);
     }
 
     /// Rapid evolution cycles: reproduction every tick, high mutation.
@@ -848,16 +608,14 @@ mod tests {
             enabled: true,
             death_threshold: 0.3, // aggressive culling
             reproduction_interval: 1,
-            mutation_sigma: 0.1, // extreme mutation
-            health_reward: 0.0,  // no reward — forces continuous death/rebirth cycle
+            mutation_sigma: 0.1,  // extreme mutation
+            health_reward: 0.0,   // no reward — forces continuous death/rebirth cycle
             health_reward_threshold: 1.0,
         };
 
         // Inject surprise broadly
         for i in 0..100_000 {
-            if i % 5 == 0 {
-                engine.pool.surprise.as_mut_slice()[i] = 0.8;
-            }
+            if i % 5 == 0 { engine.pool.surprise.as_mut_slice()[i] = 0.8; }
         }
 
         // Health decays at 0.999/tick — 0.999^50 ≈ 0.951, well above 0.3.
@@ -879,44 +637,18 @@ mod tests {
                 let s = engine.pool.surprise.as_slice()[i];
                 let h = engine.pool.health.as_slice()[i];
                 let r = engine.pool.refractory.as_slice()[i];
-                assert!(
-                    !s.is_nan() && !s.is_infinite() && s >= 0.0 && s < 1.0,
-                    "Invalid surprise[{}]={} at tick {}",
-                    i,
-                    s,
-                    tick
-                );
-                assert!(
-                    !h.is_nan() && !h.is_infinite(),
-                    "Invalid health[{}]={} at tick {}",
-                    i,
-                    h,
-                    tick
-                );
-                assert!(
-                    !r.is_nan() && r >= 0.0 && r <= 1.0,
-                    "Invalid refractory[{}]={} at tick {}",
-                    i,
-                    r,
-                    tick
-                );
+                assert!(!s.is_nan() && !s.is_infinite() && s >= 0.0 && s < 1.0,
+                    "Invalid surprise[{}]={} at tick {}", i, s, tick);
+                assert!(!h.is_nan() && !h.is_infinite(),
+                    "Invalid health[{}]={} at tick {}", i, h, tick);
+                assert!(!r.is_nan() && r >= 0.0 && r <= 1.0,
+                    "Invalid refractory[{}]={} at tick {}", i, r, tick);
             }
         }
 
         let elapsed = t.elapsed();
-        let max_gen = engine
-            .pool
-            .generation
-            .as_slice()
-            .iter()
-            .cloned()
-            .max()
-            .unwrap_or(0);
-        println!(
-            "  Completed in {:.1}s, max generation: {}",
-            elapsed.as_secs_f64(),
-            max_gen
-        );
+        let max_gen = engine.pool.generation.as_slice().iter().cloned().max().unwrap_or(0);
+        println!("  Completed in {:.1}s, max generation: {}", elapsed.as_secs_f64(), max_gen);
         assert!(max_gen > 0, "Evolution should have produced offspring");
     }
 
@@ -928,9 +660,9 @@ mod tests {
         engine.evolution_config = SwarmEvolutionConfig {
             enabled: true,
             death_threshold: 0.5,
-            reproduction_interval: 1, // every tick
+            reproduction_interval: 1,  // every tick
             mutation_sigma: 0.05,
-            health_reward: 0.0, // no reward = guaranteed death spiral
+            health_reward: 0.0,        // no reward = guaranteed death spiral
             health_reward_threshold: 1.0,
         };
 
@@ -947,40 +679,18 @@ mod tests {
             engine.tick();
         }
 
-        let max_gen = engine
-            .pool
-            .generation
-            .as_slice()
-            .iter()
-            .cloned()
-            .max()
-            .unwrap_or(0);
+        let max_gen = engine.pool.generation.as_slice().iter().cloned().max().unwrap_or(0);
         println!("Max generation: {}", max_gen);
-        assert!(
-            max_gen >= 1,
-            "Evolution must have produced offspring (max_gen={})",
-            max_gen
-        );
+        assert!(max_gen >= 1, "Evolution must have produced offspring (max_gen={})", max_gen);
 
         // Compute std dev of gene_transfer
         let gt = engine.pool.gene_transfer.as_slice();
         let n = engine.pool.n_agents;
         let mean: f64 = gt.iter().map(|&v| v as f64).sum::<f64>() / n as f64;
-        let var: f64 = gt
-            .iter()
-            .map(|&v| {
-                let d = v as f64 - mean;
-                d * d
-            })
-            .sum::<f64>()
-            / n as f64;
+        let var: f64 = gt.iter().map(|&v| { let d = v as f64 - mean; d * d }).sum::<f64>() / n as f64;
         let std = var.sqrt();
 
         println!("Gene transfer std dev after evolution: {:.6}", std);
-        assert!(
-            std > 0.0001,
-            "Mutation must create gene diversity! std={}",
-            std
-        );
+        assert!(std > 0.0001, "Mutation must create gene diversity! std={}", std);
     }
 }

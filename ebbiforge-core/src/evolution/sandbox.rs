@@ -61,16 +61,10 @@ impl SafetySandbox {
 
         // 3. Config-driven mutation rate threshold for auto-generated tools
         if self.config.mutation_rate > 0.5 {
-            warn!(
-                "🚫 [Sandbox] High mutation rate ({:.2}) — extra scrutiny applied",
-                self.config.mutation_rate
-            );
+            warn!("🚫 [Sandbox] High mutation rate ({:.2}) — extra scrutiny applied", self.config.mutation_rate);
         }
 
-        info!(
-            "[Sandbox] Verified '{}': Code passes safety checks",
-            tool.name
-        );
+        info!("[Sandbox] Verified '{}': Code passes safety checks", tool.name);
         true
     }
 }

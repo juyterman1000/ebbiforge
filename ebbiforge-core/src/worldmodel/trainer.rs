@@ -59,7 +59,12 @@ impl TrajectoryBuffer {
     }
 
     /// Record a single (state_t, action_t, state_{t+1}) sample.
-    pub fn record(&mut self, state: Vec<f32>, action: Vec<f32>, next_state: Vec<f32>) {
+    pub fn record(
+        &mut self,
+        state: Vec<f32>,
+        action: Vec<f32>,
+        next_state: Vec<f32>,
+    ) {
         let sample = TrainingSample {
             state,
             action,

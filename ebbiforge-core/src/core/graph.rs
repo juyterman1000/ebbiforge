@@ -1,3 +1,4 @@
+
 use crate::{HistoryBuffer, TrajectoryPoint};
 use pyo3::prelude::*;
 use std::sync::Arc;
@@ -30,7 +31,6 @@ impl AgentGraph {
             step: (current_len + 1) as u32,
             action: "ComputedInRust".to_string(),
             thought: format!("Processed {} items in O(1) memory cost.", current_len),
-            timestamp_ms: 0,
         };
 
         buffer.add(new_point);

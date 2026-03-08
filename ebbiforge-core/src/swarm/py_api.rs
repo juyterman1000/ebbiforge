@@ -47,13 +47,11 @@ impl PySwarmEngine {
             dict.set_item("mean_health", sum_health / n).unwrap();
 
             // Agent count and tick
-            dict.set_item("n_agents", self.engine.pool.n_agents)
-                .unwrap();
+            dict.set_item("n_agents", self.engine.pool.n_agents).unwrap();
             dict.set_item("tick", self.engine.global_tick).unwrap();
 
             // Virtual memory estimate
-            dict.set_item("virtual_mb", self.engine.pool.estimated_virtual_mb())
-                .unwrap();
+            dict.set_item("virtual_mb", self.engine.pool.estimated_virtual_mb()).unwrap();
 
             dict.into()
         })

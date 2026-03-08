@@ -1,0 +1,46 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "hippocampus-sharp-memory"
+version = "1.0.2"
+description = "Brain-inspired memory for AI agents. Ebbinghaus forgetting + Kanerva SDM + spaced recall. Sub-microsecond semantic lookup. Only remembers what matters."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.9"
+authors = [
+    { name = "Ebbiforge Team", email = "fastrunner10090@gmail.com" },
+]
+keywords = [
+    "memory", "ai", "agents", "hippocampus", "ebbinghaus",
+    "kanerva", "sdm", "forgetting", "recall", "llm",
+    "rag", "chatbot", "semantic-search", "associative-memory",
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Rust",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = [
+    "ebbiforge>=4.0.1",
+]
+
+[project.urls]
+Homepage = "https://github.com/juyterman1000/hippocampus-sharp-memory"
+Documentation = "https://github.com/juyterman1000/hippocampus-sharp-memory#readme"
+Repository = "https://github.com/juyterman1000/hippocampus-sharp-memory"
+"Bug Tracker" = "https://github.com/juyterman1000/hippocampus-sharp-memory/issues"
+"Full Framework" = "https://github.com/juyterman1000/ebbiforge"
+
+[tool.hatch.build.targets.wheel]
+packages = ["hippocampus_sharp_memory"]

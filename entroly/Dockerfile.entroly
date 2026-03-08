@@ -1,0 +1,38 @@
+# Stage 1: Build Rust extension — python:3.12 base ensures cp312 wheel ABI match
+FROM python:3.12 AS builder
+
+WORKDIR /build
+
+ENV RUSTUP_HOME=/usr/local/rustup \
+    CARGO_HOME=/usr/local/cargo \
+    PATH=/usr/local/cargo/bin:$PATH
+
+RUN apt-get update && apt-get install -y curl build-essential libssl-dev pkg-config \
+    && curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN pip install --no-cache-dir maturin
+
+COPY entroly-core/ ./entroly-core/
+RUN cd entroly-core && maturin build --release -o /build/wheels/
+
+# ── Stage 2: Runtime ─────────────────────────────────────────────────────────
+FROM python:3.12-slim
+
+WORKDIR /app
+
+# Install the cp312 Rust wheel and mcp
+COPY --from=builder /build/wheels/*.whl /tmp/wheels/
+RUN pip install --no-cache-dir /tmp/wheels/*.whl "mcp>=1.0.0" \
+    && rm -rf /tmp/wheels
+
+# Copy entroly Python package directly — no hatchling build needed
+COPY entroly/entroly/ /app/entroly/
+COPY entroly/pyproject.toml /app/
+COPY README.md /app/
+
+# Make the entroly package importable
+ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1
+
+ENTRYPOINT ["python", "-m", "entroly.server"]

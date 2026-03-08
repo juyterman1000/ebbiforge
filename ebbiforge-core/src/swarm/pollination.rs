@@ -15,11 +15,11 @@ pub struct PollinatorState {
     /// Bounded eagerness to share (0.0 to 1.0, Sigmoid mapped)
     #[pyo3(get)]
     pub share_probability: f32,
-
+    
     // Tracking active pollinations for credit assignment
     // Map of (Agent_ID => Simulation Step it was shared)
     active_shares: HashMap<u32, u64>,
-
+    
     /// Max ticks after a share event to attribute credit/blame
     #[pyo3(get, set)]
     pub recency_window: u64,
@@ -45,13 +45,7 @@ pub struct PollinatorState {
 impl PollinatorState {
     #[new]
     #[pyo3(signature = (recency_window=10, surprise_broadcast_weight=0.5, sigmoid_temperature=1.0, alpha=0.1, gamma=0.9))]
-    pub fn new(
-        recency_window: u64,
-        surprise_broadcast_weight: f32,
-        sigmoid_temperature: f32,
-        alpha: f32,
-        gamma: f32,
-    ) -> Self {
+    pub fn new(recency_window: u64, surprise_broadcast_weight: f32, sigmoid_temperature: f32, alpha: f32, gamma: f32) -> Self {
         let mut state = PollinatorState {
             raw_eagerness: 0.0, // Neutral start
             share_probability: 0.5,
@@ -67,14 +61,13 @@ impl PollinatorState {
     }
 
     /// Evaluates if this agent wants to share context based on its bounded probability.
-    /// Incorporates the current state's `surprise_score` to dynamically dilate or suppress
+    /// Incorporates the current state's `surprise_score` to dynamically dilate or suppress 
     /// the agent's baseline eagerness based on how locally volatile the environment is.
     pub fn should_pollinate(&self, random_val: f32, current_surprise: f32) -> bool {
         // High surprise (anomaly) temporarily boosts the willingness to broadcast context
         // This prevents the RL loop from suppressing emergency information flow
         // even if the agent normally leans "selfish" (low raw_eagerness)
-        let effective_probability =
-            (self.share_probability + (current_surprise * self.surprise_broadcast_weight)).min(1.0);
+        let effective_probability = (self.share_probability + (current_surprise * self.surprise_broadcast_weight)).min(1.0);
         random_val < effective_probability
     }
 
@@ -89,9 +82,10 @@ impl PollinatorState {
         if let Some(share_time) = self.active_shares.get(&target_agent_id) {
             // Only claim credit if the share was recently enough
             if current_step.saturating_sub(*share_time) <= self.recency_window {
+                
                 let current_v = self.raw_eagerness;
                 // Single-state loop approximation: next state expected value mirrors the updated baseline
-                let next_v = current_v;
+                let next_v = current_v; 
 
                 // V(s) <- V(s) + alpha * [R + gamma*V(s') - V(s)]
                 let td_error = reward_delta + (self.gamma * next_v) - current_v;
@@ -99,7 +93,7 @@ impl PollinatorState {
 
                 self.update_probability(0.0);
             }
-
+            
             // Clear tracking after feedback resolved
             self.active_shares.remove(&target_agent_id);
         }
@@ -111,9 +105,8 @@ impl PollinatorState {
     }
 
     /// Sigmoid function to bound the raw eagerness cleanly between 0 and 1
-    pub(crate) fn update_probability(&mut self, _surprise_proxy: f32) {
+    fn update_probability(&mut self, _surprise_proxy: f32) {
         // Sigmoid mapping: 1 / (1 + e^(-x / T))
-        self.share_probability =
-            1.0 / (1.0 + (-self.raw_eagerness / self.sigmoid_temperature).exp());
+        self.share_probability = 1.0 / (1.0 + (-self.raw_eagerness / self.sigmoid_temperature).exp());
     }
 }

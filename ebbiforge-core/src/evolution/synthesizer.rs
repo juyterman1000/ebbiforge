@@ -31,13 +31,9 @@ impl ToolSynthesizer {
         _description: String,
         _implementation_hint: String,
     ) -> PyResult<GeneratedTool> {
-        info!(
-            "🧬 [Synthesizer] Requesting '{}' generation via backend: {}",
-            name, self.model_name
-        );
-        Err(pyo3::exceptions::PyNotImplementedError::new_err(format!(
-            "Tool synthesis requires an active LLM backend ('{}') and is disabled in this runtime.",
-            self.model_name
-        )))
+        info!("🧬 [Synthesizer] Requesting '{}' generation via backend: {}", name, self.model_name);
+        Err(pyo3::exceptions::PyNotImplementedError::new_err(
+            format!("Tool synthesis requires an active LLM backend ('{}') and is disabled in this runtime.", self.model_name)
+        ))
     }
 }

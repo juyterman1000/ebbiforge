@@ -5,9 +5,9 @@
 
 use super::{LatentState, WorldModelConfig};
 use crate::TrajectoryPoint;
-use fastembed::{EmbeddingModel, InitOptions, TextEmbedding};
 use pyo3::prelude::*;
 use tracing::info;
+use fastembed::{TextEmbedding, InitOptions, EmbeddingModel};
 
 use parking_lot::RwLock;
 
@@ -27,15 +27,10 @@ impl LatentEncoder {
         info!("[Encoder] Initializing fastembed ONNX runtime natively...");
 
         let model = TextEmbedding::try_new(InitOptions::new(EmbeddingModel::BGEBaseENV15))
-            .map_err(|e| {
-                pyo3::exceptions::PyRuntimeError::new_err(format!("Fastembed error: {}", e))
-            })?;
+            .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(format!("Fastembed error: {}", e)))?;
 
         info!("[Encoder] Initialized (dim={})", cfg.latent_dim);
-        Ok(LatentEncoder {
-            config: cfg,
-            model: RwLock::new(model),
-        })
+        Ok(LatentEncoder { config: cfg, model: RwLock::new(model) })
     }
 
     /// Encode a trajectory + goal context into a latent state
@@ -59,10 +54,7 @@ impl LatentEncoder {
 
         for (i, point) in recent.iter().enumerate() {
             let weight = 0.6 / (i as f32 + 1.0); // 60% weight to history
-            texts.push(format!(
-                "Action: {} Thought: {}",
-                point.action, point.thought
-            ));
+            texts.push(format!("Action: {} Thought: {}", point.action, point.thought));
             weights.push(weight);
         }
 
@@ -73,17 +65,17 @@ impl LatentEncoder {
         }
 
         if texts.is_empty() {
-            texts.push("empty".to_string());
-            weights.push(1.0);
+             texts.push("empty".to_string());
+             weights.push(1.0);
         }
 
         let mut model_lock = self.model.write();
         if let Ok(embeddings) = model_lock.embed(texts, None) {
-            for (emb, weight) in embeddings.iter().zip(weights.iter()) {
-                for j in 0..self.config.latent_dim.min(emb.len()) {
-                    vector[j] += emb[j] * weight;
-                }
-            }
+             for (emb, weight) in embeddings.iter().zip(weights.iter()) {
+                 for j in 0..self.config.latent_dim.min(emb.len()) {
+                     vector[j] += emb[j] * weight;
+                 }
+             }
         }
 
         // Normalize
@@ -100,19 +92,15 @@ impl LatentEncoder {
     /// Encode a natural language action into latent space
     pub fn encode_action(&self, action: String) -> Vec<f32> {
         let mut vector = vec![0.0f32; self.config.latent_dim];
-        let texts = vec![if action.is_empty() {
-            "empty".to_string()
-        } else {
-            action
-        }];
-
+        let texts = vec![if action.is_empty() { "empty".to_string() } else { action }];
+        
         let mut model_lock = self.model.write();
         if let Ok(embeddings) = model_lock.embed(texts, None) {
-            if let Some(emb) = embeddings.first() {
-                for i in 0..self.config.latent_dim.min(emb.len()) {
-                    vector[i] = emb[i];
-                }
-            }
+             if let Some(emb) = embeddings.first() {
+                 for i in 0..self.config.latent_dim.min(emb.len()) {
+                     vector[i] = emb[i];
+                 }
+             }
         }
 
         self.normalize(&mut vector);

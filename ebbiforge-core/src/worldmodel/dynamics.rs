@@ -71,9 +71,9 @@ impl TrainStats {
 pub struct AutoregressivePredictor {
     config: WorldModelConfig,
     varmap: VarMap,
-    proj: Linear, // [state;action] → hidden
-    res: Linear,  // hidden → hidden (residual)
-    out: Linear,  // hidden → output
+    proj: Linear,   // [state;action] → hidden
+    res: Linear,    // hidden → hidden (residual)
+    out: Linear,    // hidden → output
     device: Device,
     last_train_loss: f32,
     last_val_loss: f32,
@@ -145,12 +145,10 @@ impl AutoregressivePredictor {
             return Ok(self.last_train_loss);
         }
 
-        let mut opt = self
-            .make_optimizer(learning_rate)
+        let mut opt = self.make_optimizer(learning_rate)
             .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(format!("Opt: {}", e)))?;
 
-        let loss = self
-            .train_step(&samples, &mut opt)
+        let loss = self.train_step(&samples, &mut opt)
             .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(format!("Train: {}", e)))?;
         self.last_train_loss = loss;
         self.total_train_steps += 1;
@@ -190,16 +188,11 @@ impl AutoregressivePredictor {
 
         info!(
             "[Dynamics] train={}, val={}, epochs={}, bs={}, lr={}",
-            train_data.len(),
-            val_data.len(),
-            epochs,
-            batch_size,
-            learning_rate
+            train_data.len(), val_data.len(), epochs, batch_size, learning_rate
         );
 
         // Create ONE optimizer for the entire training run (Adam needs state across steps)
-        let mut opt = self
-            .make_optimizer(learning_rate)
+        let mut opt = self.make_optimizer(learning_rate)
             .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(format!("Opt: {}", e)))?;
 
         let mut stats = Vec::with_capacity(epochs);
@@ -218,19 +211,11 @@ impl AutoregressivePredictor {
             let mut n_batches = 0u32;
             for chunk in train_data.chunks(batch_size) {
                 match self.train_step(chunk, &mut opt) {
-                    Ok(l) => {
-                        epoch_loss += l;
-                        n_batches += 1;
-                        self.total_train_steps += 1;
-                    }
+                    Ok(l) => { epoch_loss += l; n_batches += 1; self.total_train_steps += 1; }
                     Err(e) => tracing::warn!("step fail epoch {}: {}", epoch, e),
                 }
             }
-            let tl = if n_batches > 0 {
-                epoch_loss / n_batches as f32
-            } else {
-                f32::MAX
-            };
+            let tl = if n_batches > 0 { epoch_loss / n_batches as f32 } else { f32::MAX };
             self.last_train_loss = tl;
 
             // Validation
@@ -256,21 +241,12 @@ impl AutoregressivePredictor {
             if epoch % 10 == 0 || epoch == epochs - 1 {
                 info!(
                     "[Dynamics] E{}/{}: train={:.6} val={:.6} lr={:.6} best={:.6}",
-                    epoch + 1,
-                    epochs,
-                    tl,
-                    vl,
-                    lr,
-                    self.best_val_loss
+                    epoch + 1, epochs, tl, vl, lr, self.best_val_loss
                 );
             }
 
             if no_improve >= patience {
-                info!(
-                    "[Dynamics] Early stop at epoch {} (patience={})",
-                    epoch + 1,
-                    patience
-                );
+                info!("[Dynamics] Early stop at epoch {} (patience={})", epoch + 1, patience);
                 break;
             }
         }
@@ -278,35 +254,22 @@ impl AutoregressivePredictor {
         Ok(stats)
     }
 
-    pub fn get_training_loss(&self) -> f32 {
-        self.last_train_loss
-    }
-    pub fn get_validation_loss(&self) -> f32 {
-        self.last_val_loss
-    }
-    pub fn get_best_val_loss(&self) -> f32 {
-        self.best_val_loss
-    }
-    pub fn get_total_train_steps(&self) -> u64 {
-        self.total_train_steps
-    }
+    pub fn get_training_loss(&self) -> f32 { self.last_train_loss }
+    pub fn get_validation_loss(&self) -> f32 { self.last_val_loss }
+    pub fn get_best_val_loss(&self) -> f32 { self.best_val_loss }
+    pub fn get_total_train_steps(&self) -> u64 { self.total_train_steps }
 
     /// Save weights to .safetensors
     pub fn save_weights(&self, path: String) -> pyo3::PyResult<()> {
-        self.varmap
-            .save(&path)
+        self.varmap.save(&path)
             .map_err(|e| pyo3::exceptions::PyIOError::new_err(format!("Save: {}", e)))?;
-        info!(
-            "[Dynamics] Saved to {} (best_val={:.6})",
-            path, self.best_val_loss
-        );
+        info!("[Dynamics] Saved to {} (best_val={:.6})", path, self.best_val_loss);
         Ok(())
     }
 
     /// Load weights from .safetensors
     pub fn load_weights(&mut self, path: String) -> pyo3::PyResult<()> {
-        self.varmap
-            .load(&path)
+        self.varmap.load(&path)
             .map_err(|e| pyo3::exceptions::PyIOError::new_err(format!("Load: {}", e)))?;
         info!("[Dynamics] Loaded from {}", path);
         Ok(())
@@ -347,10 +310,8 @@ impl AutoregressivePredictor {
     /// Forward for a single sample → Vec<f32>
     fn forward_vec(&self, s: &[f32], a: &[f32]) -> candle_core::Result<Vec<f32>> {
         let d = self.config.latent_dim;
-        let mut sv = s.to_vec();
-        sv.resize(d, 0.0);
-        let mut av = a.to_vec();
-        av.resize(d, 0.0);
+        let mut sv = s.to_vec(); sv.resize(d, 0.0);
+        let mut av = a.to_vec(); av.resize(d, 0.0);
         let st = Tensor::from_vec(sv, (1, d), &self.device)?;
         let at = Tensor::from_vec(av, (1, d), &self.device)?;
         let input = Tensor::cat(&[&st, &at], 1)?;
@@ -359,16 +320,18 @@ impl AutoregressivePredictor {
 
     /// MSE loss without gradient (validation)
     fn compute_loss(&self, samples: &[TrainingSample]) -> candle_core::Result<f32> {
-        if samples.is_empty() {
-            return Ok(0.0);
-        }
+        if samples.is_empty() { return Ok(0.0); }
         let (input, targets) = self.build_tensors(samples)?;
         let pred = self.forward_tensor(&input)?;
         pred.sub(&targets)?.sqr()?.mean_all()?.to_scalar::<f32>()
     }
 
     /// Single training step: forward → MSE → backward → AdamW update
-    fn train_step(&self, samples: &[TrainingSample], opt: &mut AdamW) -> candle_core::Result<f32> {
+    fn train_step(
+        &self,
+        samples: &[TrainingSample],
+        opt: &mut AdamW,
+    ) -> candle_core::Result<f32> {
         let (input, targets) = self.build_tensors(samples)?;
         let pred = self.forward_tensor(&input)?;
         let loss = pred.sub(&targets)?.sqr()?.mean_all()?;
@@ -386,15 +349,9 @@ impl AutoregressivePredictor {
         let mut tf = Vec::with_capacity(n * d);
 
         for s in samples {
-            let mut sv = s.state.clone();
-            sv.resize(d, 0.0);
-            sf.extend_from_slice(&sv);
-            let mut av = s.action.clone();
-            av.resize(d, 0.0);
-            af.extend_from_slice(&av);
-            let mut tv = s.next_state.clone();
-            tv.resize(d, 0.0);
-            tf.extend_from_slice(&tv);
+            let mut sv = s.state.clone(); sv.resize(d, 0.0); sf.extend_from_slice(&sv);
+            let mut av = s.action.clone(); av.resize(d, 0.0); af.extend_from_slice(&av);
+            let mut tv = s.next_state.clone(); tv.resize(d, 0.0); tf.extend_from_slice(&tv);
         }
 
         let states = Tensor::from_vec(sf, (n, d), &self.device)?;
@@ -421,8 +378,6 @@ impl AutoregressivePredictor {
 fn l2_normalize(v: &mut Vec<f32>) {
     let norm: f32 = v.iter().map(|x| x * x).sum::<f32>().sqrt();
     if norm > 0.0 {
-        for x in v.iter_mut() {
-            *x /= norm;
-        }
+        for x in v.iter_mut() { *x /= norm; }
     }
 }

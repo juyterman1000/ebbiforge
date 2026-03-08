@@ -1,0 +1,168 @@
+[
+  {
+    "id": "sql_injection_fix",
+    "query": "fix the SQL injection in cursor.execute",
+    "fragments": [
+      {
+        "content": "def get_user(user_id):\n    cursor.execute(f'SELECT * FROM users WHERE id = {user_id}')\n    return cursor.fetchone()",
+        "source": "auth/db.py",
+        "token_count": 30,
+        "expected_selected": true
+      },
+      {
+        "content": "def parameterized_query(cursor, query, params):\n    cursor.execute(query, params)\n    return cursor.fetchall()",
+        "source": "auth/queries.py",
+        "token_count": 25,
+        "expected_selected": true
+      },
+      {
+        "content": "# Application README\n\nThis is a web application built with Flask.",
+        "source": "README.md",
+        "token_count": 15,
+        "expected_selected": false
+      },
+      {
+        "content": "import pytest\n\ndef test_conftest():\n    pass",
+        "source": "tests/conftest.py",
+        "token_count": 10,
+        "expected_selected": false
+      },
+      {
+        "content": "DB_HOST = 'localhost'\nDB_PORT = 5432\nDB_NAME = 'app_db'",
+        "source": "config/database.py",
+        "token_count": 15,
+        "expected_selected": true
+      }
+    ],
+    "token_budget": 80,
+    "expected_min_recall": 0.66
+  },
+  {
+    "id": "auth_middleware_refactor",
+    "query": "refactor the authentication middleware to use JWT tokens",
+    "fragments": [
+      {
+        "content": "class AuthMiddleware:\n    def process_request(self, request):\n        token = request.headers.get('Authorization')\n        if not token:\n            return Response(status=401)\n        user = verify_session(token)\n        request.user = user",
+        "source": "middleware/auth.py",
+        "token_count": 45,
+        "expected_selected": true
+      },
+      {
+        "content": "def verify_session(token):\n    session = Session.query.filter_by(token=token).first()\n    if session and session.is_valid():\n        return session.user\n    return None",
+        "source": "auth/session.py",
+        "token_count": 35,
+        "expected_selected": true
+      },
+      {
+        "content": "from datetime import datetime\n\nclass User:\n    def __init__(self, id, email, role):\n        self.id = id\n        self.email = email\n        self.role = role",
+        "source": "models/user.py",
+        "token_count": 30,
+        "expected_selected": true
+      },
+      {
+        "content": "def render_homepage():\n    return '<h1>Welcome</h1>'",
+        "source": "views/home.py",
+        "token_count": 12,
+        "expected_selected": false
+      },
+      {
+        "content": ".button { color: blue; }\n.nav { display: flex; }",
+        "source": "static/style.css",
+        "token_count": 10,
+        "expected_selected": false
+      }
+    ],
+    "token_budget": 120,
+    "expected_min_recall": 0.66
+  },
+  {
+    "id": "performance_database_query",
+    "query": "optimize the slow database query in the dashboard endpoint",
+    "fragments": [
+      {
+        "content": "@app.route('/dashboard')\ndef dashboard():\n    users = User.query.all()\n    for user in users:\n        orders = Order.query.filter_by(user_id=user.id).all()\n        user.order_count = len(orders)\n    return render_template('dashboard.html', users=users)",
+        "source": "routes/dashboard.py",
+        "token_count": 50,
+        "expected_selected": true
+      },
+      {
+        "content": "class Order(db.Model):\n    id = db.Column(db.Integer, primary_key=True)\n    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))\n    total = db.Column(db.Float)\n    created_at = db.Column(db.DateTime)",
+        "source": "models/order.py",
+        "token_count": 35,
+        "expected_selected": true
+      },
+      {
+        "content": "SQLALCHEMY_DATABASE_URI = 'postgresql://localhost/app'\nSQLALCHEMY_TRACK_MODIFICATIONS = False\nSQLALCHEMY_POOL_SIZE = 10",
+        "source": "config.py",
+        "token_count": 20,
+        "expected_selected": true
+      },
+      {
+        "content": "def send_welcome_email(user):\n    msg = Message('Welcome!', recipients=[user.email])\n    mail.send(msg)",
+        "source": "utils/email.py",
+        "token_count": 20,
+        "expected_selected": false
+      }
+    ],
+    "token_budget": 100,
+    "expected_min_recall": 0.66
+  },
+  {
+    "id": "vague_fix_bug",
+    "query": "fix the bug",
+    "fragments": [
+      {
+        "content": "def calculate_total(items):\n    total = 0\n    for item in items:\n        total += item.price * item.quantity\n    return total",
+        "source": "cart/calculator.py",
+        "token_count": 25,
+        "expected_selected": true
+      },
+      {
+        "content": "def process_payment(amount, card_token):\n    stripe.Charge.create(amount=amount, source=card_token)\n    return True",
+        "source": "payments/stripe.py",
+        "token_count": 20,
+        "expected_selected": true
+      },
+      {
+        "content": "# Changelog\n\n## v1.0.0\n- Initial release",
+        "source": "CHANGELOG.md",
+        "token_count": 10,
+        "expected_selected": false
+      }
+    ],
+    "token_budget": 60,
+    "expected_min_recall": 0.5
+  },
+  {
+    "id": "add_test_coverage",
+    "query": "add unit tests for the payment processing module",
+    "fragments": [
+      {
+        "content": "def process_payment(amount, currency, card_token):\n    if amount <= 0:\n        raise ValueError('Amount must be positive')\n    charge = stripe.Charge.create(amount=int(amount * 100), currency=currency, source=card_token)\n    return charge.id",
+        "source": "payments/processor.py",
+        "token_count": 45,
+        "expected_selected": true
+      },
+      {
+        "content": "class PaymentError(Exception):\n    pass\n\nclass InsufficientFundsError(PaymentError):\n    pass\n\nclass InvalidCardError(PaymentError):\n    pass",
+        "source": "payments/exceptions.py",
+        "token_count": 25,
+        "expected_selected": true
+      },
+      {
+        "content": "import pytest\nfrom unittest.mock import patch, MagicMock\n\n@pytest.fixture\ndef mock_stripe():\n    with patch('payments.processor.stripe') as mock:\n        yield mock",
+        "source": "tests/test_payments.py",
+        "token_count": 30,
+        "expected_selected": true
+      },
+      {
+        "content": "def validate_email(email):\n    import re\n    return bool(re.match(r'^[\\w.-]+@[\\w.-]+\\.\\w+$', email))",
+        "source": "utils/validators.py",
+        "token_count": 20,
+        "expected_selected": false
+      }
+    ],
+    "token_budget": 100,
+    "expected_min_recall": 0.66
+  }
+]

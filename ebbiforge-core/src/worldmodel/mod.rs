@@ -18,7 +18,6 @@ pub mod geometric;
 pub mod planner;
 pub mod trainer;
 
-use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use serde::{Deserialize, Serialize};
 
@@ -99,21 +98,14 @@ impl LatentState {
     pub fn compute_surprise(&mut self, predicted_prior: &LatentState) {
         // Assertion: ensure both vectors are L2-normalized before computing cosine similarity
         let norm_self: f32 = self.vector.iter().map(|x| x * x).sum::<f32>().sqrt();
-        let norm_pred: f32 = predicted_prior
-            .vector
-            .iter()
-            .map(|x| x * x)
-            .sum::<f32>()
-            .sqrt();
+        let norm_pred: f32 = predicted_prior.vector.iter().map(|x| x * x).sum::<f32>().sqrt();
         debug_assert!(
             (norm_self - 1.0).abs() < 1e-3 || norm_self == 0.0,
-            "Real state not properly L2-normalized! Norm: {}",
-            norm_self
+            "Real state not properly L2-normalized! Norm: {}", norm_self
         );
         debug_assert!(
             (norm_pred - 1.0).abs() < 1e-3 || norm_pred == 0.0,
-            "Predicted state not properly L2-normalized! Norm: {}",
-            norm_pred
+            "Predicted state not properly L2-normalized! Norm: {}", norm_pred
         );
 
         let sim = self.similarity(predicted_prior);
@@ -140,7 +132,7 @@ pub struct WorldModelConfig {
     pub prediction_steps: usize,
     #[pyo3(get, set)]
     pub learning_rate: f32,
-
+    
     /// Base decay rate for Ebbinghaus retention curve (how fast memories fade)
     #[pyo3(get, set)]
     pub ebbinghaus_decay_rate: f32,
@@ -166,26 +158,8 @@ impl WorldModelConfig {
         ebbinghaus_decay_rate: f32,
         max_memories_per_agent: usize,
         grid_size: (usize, usize),
-    ) -> PyResult<Self> {
-        if latent_dim == 0 {
-            return Err(PyValueError::new_err("latent_dim must be > 0"));
-        }
-        if !(0.0..=1.0).contains(&ebbinghaus_decay_rate) {
-            return Err(PyValueError::new_err(format!(
-                "ebbinghaus_decay_rate must be in [0.0, 1.0], got {}",
-                ebbinghaus_decay_rate
-            )));
-        }
-        if learning_rate <= 0.0 {
-            return Err(PyValueError::new_err(format!(
-                "learning_rate must be > 0.0, got {}",
-                learning_rate
-            )));
-        }
-        if grid_size.0 == 0 || grid_size.1 == 0 {
-            return Err(PyValueError::new_err("grid_size dimensions must be > 0"));
-        }
-        Ok(WorldModelConfig {
+    ) -> Self {
+        WorldModelConfig {
             latent_dim,
             context_window,
             prediction_steps,
@@ -193,7 +167,7 @@ impl WorldModelConfig {
             ebbinghaus_decay_rate,
             max_memories_per_agent,
             grid_size,
-        })
+        }
     }
 
     pub fn __repr__(&self) -> String {
@@ -206,17 +180,7 @@ impl WorldModelConfig {
 
 impl Default for WorldModelConfig {
     fn default() -> Self {
-        // World is 1000×1000 by default — matches test coordinate space and SwarmConfig default.
-        // (100,100) is far too small: test villages/cities at coords up to 900 would be unreachable.)
-        WorldModelConfig {
-            latent_dim: 768,
-            context_window: 8,
-            prediction_steps: 4,
-            learning_rate: 0.001,
-            ebbinghaus_decay_rate: 0.1,
-            max_memories_per_agent: 64,
-            grid_size: (1000, 1000),
-        }
+        Self::new(768, 8, 4, 0.001, 0.1, 64, (100, 100))
     }
 }
 
@@ -292,11 +256,7 @@ pub struct PollinatorConfig {
 impl PollinatorConfig {
     #[new]
     #[pyo3(signature = (recency_window = 15, sigmoid_temperature = 1.0, surprise_broadcast_weight = 0.6))]
-    pub fn new(
-        recency_window: usize,
-        sigmoid_temperature: f32,
-        surprise_broadcast_weight: f32,
-    ) -> Self {
+    pub fn new(recency_window: usize, sigmoid_temperature: f32, surprise_broadcast_weight: f32) -> Self {
         PollinatorConfig {
             recency_window,
             sigmoid_temperature,

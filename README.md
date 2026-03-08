@@ -43,7 +43,7 @@ The objective is to allow massive swarms to compute continuously and interact wi
 
 ---
 
-## Monorepo Architecture Map
+## 🗺️ Monorepo Architecture Map
 
 Ebbiforge is a large monorepo. Here is how the pieces fit together:
 
@@ -54,9 +54,10 @@ Ebbiforge is a large monorepo. Here is how the pieces fit together:
 
 ---
 
-## Choose Your Path (Installation)
+## 🚦 Choose Your Path (Installation)
 
 Because Ebbiforge bridges multiple ecosystems, your setup depends on your role.
+
 * **💡 Can Python devs use the core Rust engine?** 
   Yes! When you `pip install ebbiforge`, the entire Rust engine is already pre-compiled inside the Python wheel. You get 100% of the Rust performance without ever installing the Rust toolchain.
 

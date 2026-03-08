@@ -72,34 +72,21 @@ impl PredictiveSafetyShield {
     }
 }
 
-/// Compute trajectory similarity using Longest Common Subsequence (LCS).
-///
-/// LCS finds the longest ordered subsequence common to both trajectories,
-/// regardless of padding or inserted actions. This catches evasive variants
-/// where an attacker inserts noise actions between dangerous steps.
-///
-/// Returns: lcs_length / historical.len() (fraction of dangerous pattern matched)
+/// Internal helper function (not exposed to Python)
 fn calculate_similarity(current: &[TrajectoryPoint], historical: &[TrajectoryPoint]) -> f64 {
-    let n = current.len();
-    let m = historical.len();
-    if m == 0 || n == 0 {
+    let compare_len = current.len().min(historical.len());
+    if compare_len == 0 {
         return 0.0;
     }
 
-    // Build the LCS dynamic programming table
-    let mut dp = vec![vec![0usize; m + 1]; n + 1];
-    for i in 1..=n {
-        for j in 1..=m {
-            if current[i - 1].action == historical[j - 1].action {
-                dp[i][j] = dp[i - 1][j - 1] + 1;
-            } else {
-                dp[i][j] = dp[i - 1][j].max(dp[i][j - 1]);
-            }
+    let mut matches = 0;
+    for i in 0..compare_len {
+        if current[i].action == historical[i].action {
+            matches += 1;
         }
     }
 
-    let lcs_len = dp[n][m];
-    lcs_len as f64 / m as f64
+    matches as f64 / historical.len() as f64
 }
 
 impl Middleware for PredictiveSafetyShield {
@@ -112,7 +99,10 @@ impl Middleware for PredictiveSafetyShield {
         let (risk_score, reason) = self.analyze_risk(trajectory_json);
 
         if risk_score >= self.risk_threshold {
-            warn!("[SafetyShield] BLOCKING EXECUTION. Risk: {:.2}", risk_score);
+            warn!(
+                "[SafetyShield] BLOCKING EXECUTION. Risk: {:.2}",
+                risk_score
+            );
             if let Some(ref r) = reason {
                 warn!("   Reason: {}", r);
             }

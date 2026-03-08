@@ -16,11 +16,11 @@ pub struct SpatialHashGrid {
     ///   Pass 1: count agents per bucket.
     ///   Pass 2: scatter agents into pre-allocated runs.
     /// This avoids Vec-of-Vec heap fragmentation entirely.
-    counts: Vec<u32>, // [table_size]  agents per bucket
-    offsets: Vec<u32>, // [table_size]  start of each bucket in `data`
-    data: Vec<u32>,    // [N]           agent indices, packed
-    table_size: usize, // power of two
-    mask: usize,       // table_size - 1
+    counts: Vec<u32>,         // [table_size]  agents per bucket
+    offsets: Vec<u32>,        // [table_size]  start of each bucket in `data`
+    data: Vec<u32>,           // [N]           agent indices, packed
+    table_size: usize,        // power of two
+    mask: usize,              // table_size - 1
     pub cell_size: f32,
     pub world_min: [f32; 2],
 }
@@ -28,14 +28,11 @@ pub struct SpatialHashGrid {
 impl SpatialHashGrid {
     /// `table_size` should be ≥ 2× expected agent count for low collision rate.
     pub fn new(table_size: usize, cell_size: f32, world_min: [f32; 2]) -> Self {
-        assert!(
-            table_size.is_power_of_two(),
-            "table_size must be a power of two"
-        );
+        assert!(table_size.is_power_of_two(), "table_size must be a power of two");
         SpatialHashGrid {
-            counts: vec![0u32; table_size],
+            counts:  vec![0u32; table_size],
             offsets: vec![0u32; table_size],
-            data: Vec::new(),
+            data:    Vec::new(),
             table_size,
             mask: table_size - 1,
             cell_size,
@@ -48,7 +45,8 @@ impl SpatialHashGrid {
     #[inline(always)]
     fn hash(&self, cx: i32, cy: i32) -> usize {
         // Combine two i32s into one u64, then Fibonacci hash
-        let key = (cx as u64).wrapping_mul(2654435761) ^ (cy as u64).wrapping_mul(2246822519);
+        let key = (cx as u64).wrapping_mul(2654435761)
+                ^ (cy as u64).wrapping_mul(2246822519);
         // Fibonacci multiplier for u64: 11400714819323198485
         (key.wrapping_mul(11400714819323198485) >> (64 - self.table_size.trailing_zeros())) as usize
             & self.mask
@@ -87,11 +85,11 @@ impl SpatialHashGrid {
         }
 
         // ── Pass 2: scatter ──────────────────────────────────────────────────
-        self.counts.iter_mut().for_each(|c| *c = 0); // reuse as cursor
+        self.counts.iter_mut().for_each(|c| *c = 0);  // reuse as cursor
 
         for i in 0..n {
             let (cx, cy) = self.world_to_cell(pool.x[i], pool.y[i]);
-            let h = self.hash(cx, cy);
+            let h    = self.hash(cx, cy);
             let slot = (self.offsets[h] + self.counts[h]) as usize;
             self.data[slot] = i as u32;
             self.counts[h] += 1;
@@ -138,6 +136,7 @@ impl SpatialHashGrid {
         self.counts[h] += 1;
     }
 
+
     /// Query all candidate neighbors within radius `r` of (qx, qy).
     ///
     /// Calls `callback(agent_idx)` for each candidate.
@@ -155,9 +154,9 @@ impl SpatialHashGrid {
 
         for cy in cy0..=cy1 {
             for cx in cx0..=cx1 {
-                let h = self.hash(cx, cy);
+                let h     = self.hash(cx, cy);
                 let start = self.offsets[h] as usize;
-                let end = start + self.counts[h] as usize;
+                let end   = start + self.counts[h] as usize;
                 for &idx in &self.data[start..end] {
                     callback(idx);
                 }
@@ -167,14 +166,16 @@ impl SpatialHashGrid {
 
     /// Same as `query_radius` but skips `self_idx`.
     #[inline]
-    pub fn query_neighbors<F>(&self, self_idx: u32, qx: f32, qy: f32, r: f32, mut callback: F)
-    where
+    pub fn query_neighbors<F>(
+        &self,
+        self_idx: u32,
+        qx: f32, qy: f32, r: f32,
+        mut callback: F,
+    ) where
         F: FnMut(u32),
     {
         self.query_radius(qx, qy, r, |idx| {
-            if idx != self_idx {
-                callback(idx)
-            }
+            if idx != self_idx { callback(idx) }
         });
     }
 }
@@ -200,18 +201,14 @@ mod tests {
 
     #[test]
     fn rebuild_query_counts_match() {
-        let pool = make_pool_circle(200, 5.0);
+        let pool  = make_pool_circle(200, 5.0);
         let mut grid = SpatialHashGrid::new(1024, 2.0, [-20.0, -20.0]);
         grid.rebuild(&pool);
 
         // Spatial hash grids are conservative filters — collisions may return extras
         let mut found = 0usize;
         grid.query_radius(0.0, 0.0, 8.0, |_| found += 1);
-        assert!(
-            found >= 200,
-            "expected at least all agents in radius, got {}",
-            found
-        );
+        assert!(found >= 200, "expected at least all agents in radius, got {}", found);
     }
 
     #[test]
@@ -221,9 +218,8 @@ mod tests {
         grid.rebuild(&pool);
 
         for i in 0..50u32 {
-            grid.query_neighbors(i, pool.x[i as usize], pool.y[i as usize], 5.0, |j| {
-                assert_ne!(j, i)
-            });
+            grid.query_neighbors(i, pool.x[i as usize], pool.y[i as usize], 5.0,
+                |j| assert_ne!(j, i));
         }
     }
 }

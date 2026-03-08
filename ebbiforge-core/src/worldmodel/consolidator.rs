@@ -85,8 +85,7 @@ impl MemoryConsolidator {
             // But highly surprising events are retained longer!
             // We modulate the decay rate so high surprise = lower decay.
             let hours_elapsed = (current_time.saturating_sub(state.timestamp)) as f32 / 3600.0;
-            let effective_decay =
-                self.config.ebbinghaus_decay_rate * (1.0 - state.surprise_score).max(0.1);
+            let effective_decay = self.config.ebbinghaus_decay_rate * (1.0 - state.surprise_score).max(0.1);
             let ebbinghaus_weight = (-hours_elapsed * effective_decay).exp();
 
             for (i, v) in state.vector.iter().enumerate() {
@@ -129,7 +128,9 @@ impl MemoryConsolidator {
 
         // Store in consolidated memory
         let mut store = self.consolidated.write();
-        let memories = store.entry(agent_id.clone()).or_insert_with(Vec::new);
+        let memories = store
+            .entry(agent_id.clone())
+            .or_insert_with(Vec::new);
         memories.push(consolidated.clone());
 
         // Forgetting pressure: when capacity exceeded, merge the two lowest-salience
@@ -225,19 +226,15 @@ impl MemoryConsolidator {
         let (idx_a, idx_b) = (indices[0], indices[1]);
 
         // Merge: weighted average by trajectory count
-        let (lo, hi) = if idx_a < idx_b {
-            (idx_a, idx_b)
-        } else {
-            (idx_b, idx_a)
-        };
+        let (lo, hi) = if idx_a < idx_b { (idx_a, idx_b) } else { (idx_b, idx_a) };
         let total_traj = memories[lo].num_trajectories + memories[hi].num_trajectories;
         let w_a = memories[lo].num_trajectories as f32 / total_traj as f32;
         let w_b = memories[hi].num_trajectories as f32 / total_traj as f32;
 
         let mut merged_vec = vec![0.0f32; latent_dim];
         for j in 0..latent_dim.min(memories[lo].summary.vector.len()) {
-            merged_vec[j] =
-                memories[lo].summary.vector[j] * w_a + memories[hi].summary.vector[j] * w_b;
+            merged_vec[j] = memories[lo].summary.vector[j] * w_a
+                          + memories[hi].summary.vector[j] * w_b;
         }
 
         // Re-normalize to unit sphere
@@ -249,14 +246,15 @@ impl MemoryConsolidator {
         }
 
         // Merged surprise: weighted average
-        let merged_surprise =
-            memories[lo].summary.surprise_score * w_a + memories[hi].summary.surprise_score * w_b;
-        let merged_span = memories[lo]
-            .time_span_hours
-            .max(memories[hi].time_span_hours);
+        let merged_surprise = memories[lo].summary.surprise_score * w_a
+                            + memories[hi].summary.surprise_score * w_b;
+        let merged_span = memories[lo].time_span_hours.max(memories[hi].time_span_hours);
 
-        let mut merged_state =
-            LatentState::new(merged_vec, memories[lo].summary.agent_id.clone(), 0);
+        let mut merged_state = LatentState::new(
+            merged_vec,
+            memories[lo].summary.agent_id.clone(),
+            0,
+        );
         merged_state.surprise_score = merged_surprise;
 
         let merged = ConsolidatedMemory {
