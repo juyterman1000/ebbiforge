@@ -41,6 +41,7 @@ from .adaptive_pruner import EntrolyPruner, FragmentGuard
 from .provenance import build_provenance, ContextProvenance
 from .multimodal import ingest_image as _mm_image, ingest_diagram as _mm_diagram
 from .multimodal import ingest_voice as _mm_voice, ingest_diff as _mm_diff
+from .proxy_transform import calibrated_token_count as _calibrated_token_count
 # ── Rust engine import (required) ──────────────────────────────────
 try:
     from entroly_core import EntrolyEngine as RustEngine
@@ -285,6 +286,13 @@ class EntrolyEngine:
                     "key_terms":         analysis_dict.get("key_terms", []),
                 }
 
+        # Always capture query analysis (vagueness is needed by EGTC even
+        # when the query doesn't trigger refinement)
+        query_analysis = {
+            "vagueness_score": analysis_dict["vagueness_score"],
+            "key_terms": analysis_dict.get("key_terms", []),
+        } if query and analysis_dict else {}
+
         # GC freeze: disable during hot Rust dispatch + final result assembly.
         gc.disable()
         try:
@@ -293,11 +301,15 @@ class EntrolyEngine:
                 result = dict(result)
                 if refinement_info:
                     result["query_refinement"] = refinement_info
+                if query_analysis:
+                    result["query_analysis"] = query_analysis
                 return result
             else:
                 result = self._optimize_python(token_budget, refined_query)
                 if refinement_info:
                     result["query_refinement"] = refinement_info
+                if query_analysis:
+                    result["query_analysis"] = query_analysis
                 return result
         finally:
             gc.enable()
@@ -498,7 +510,7 @@ class EntrolyEngine:
         self._total_fragments_ingested += 1
 
         if token_count <= 0:
-            token_count = max(1, len(content) // 4)
+            token_count = _calibrated_token_count(content, source)
 
         # Fix #4 (Python fallback): enforce max_fragments cap
         if len(self._fragments) >= self.config.max_fragments:
@@ -587,7 +599,7 @@ class EntrolyEngine:
                 skel = extract_skeleton(content, source)
             if skel:
                 has_skeleton = True
-                skeleton_tc = max(1, len(skel) // 4)
+                skeleton_tc = _calibrated_token_count(skel, source)
         except Exception:
             pass  # skeleton is best-effort; never block ingest
 
