@@ -6,8 +6,10 @@ os.environ["OMP_NUM_THREADS"] = "1"
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 
 from typing import List, Optional, Dict, Any
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import JSONResponse
 from pydantic import BaseModel
 import uvicorn
 import uuid
@@ -38,6 +40,59 @@ os.environ["GEMINI_API_KEY"] = API_KEY
 ingestion_queue = queue.Queue()
 
 app = FastAPI(title="CogOps API", description="API for CogOps Agent", version="1.0.0")
+
+
+RATE_LIMIT_REQUESTS = 100
+RATE_LIMIT_WINDOW_SECONDS = 60
+_rate_limit_state: Dict[str, Dict[str, float]] = {}
+
+
+def _get_user_id(request: Request) -> str:
+    """
+    Derive a stable per-user identifier for rate limiting.
+    Prefers explicit header, then falls back to client IP.
+    """
+    user_id = request.headers.get("X-User-Id") or request.headers.get("X-User-ID")
+    if user_id:
+        return f"hdr:{user_id}"
+    client_host = getattr(request.client, "host", None) or "unknown"
+    return f"ip:{client_host}"
+
+
+class RateLimitMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        # Only apply to API routes
+        if not str(request.url.path).startswith("/api/"):
+            return await call_next(request)
+
+        now = time.time()
+        user_id = _get_user_id(request)
+
+        state = _rate_limit_state.get(user_id)
+        if not state or now - state.get("window_start", 0) > RATE_LIMIT_WINDOW_SECONDS:
+            state = {"window_start": now, "count": 0}
+        count = state["count"]
+
+        if count >= RATE_LIMIT_REQUESTS:
+            retry_after = max(
+                0.0,
+                RATE_LIMIT_WINDOW_SECONDS - (now - state["window_start"]),
+            )
+            return JSONResponse(
+                {
+                    "detail": "Rate limit exceeded. Max 100 requests per minute per user.",
+                    "retry_after_seconds": round(retry_after, 2),
+                },
+                status_code=429,
+            )
+
+        state["count"] = count + 1
+        _rate_limit_state[user_id] = state
+
+        return await call_next(request)
+
+
+app.add_middleware(RateLimitMiddleware)
 
 app.add_middleware(
     CORSMiddleware,

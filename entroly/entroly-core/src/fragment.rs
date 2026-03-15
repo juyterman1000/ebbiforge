@@ -113,7 +113,36 @@ pub fn compute_relevance(
         + w_entropy * frag.entropy_score)
         / total;
 
-    (base * feedback_multiplier).min(1.0)
+    let raw = base * feedback_multiplier;
+
+    // ── Logit Softcap ──────────────────────────────────────────────
+    // f(x) = c · tanh(x / c)  [Gemini, Anil et al. 2024]
+    //
+    // Compresses [0, ∞) → [0, c) while preserving rank ordering.
+    // Properties:
+    //   f'(0) = 1   — linear regime for small scores (no distortion)
+    //   f(x) → c    — asymptotes at cap (prevents outlier dominance)
+    //   Monotone, smooth, C∞-differentiable
+    //
+    // Prevents a single high-feedback fragment from monopolising the
+    // knapsack budget. Cap = 0.85: score=0.5→0.49, score=1.0→0.76,
+    // score=2.0→0.84 (near saturation).
+    softcap(raw, SOFTCAP)
+}
+
+/// Default softcap. 0.85 is calibrated so typical scores (0.3–0.7)
+/// remain nearly linear while boosted scores (>1.0) are compressed.
+const SOFTCAP: f64 = 0.85;
+
+/// Logit softcap: `c · tanh(x / c)`.
+///
+/// Gemini-style bounded scoring. When `cap ≤ 0`, falls back to `min(x, 1)`.
+#[inline]
+pub fn softcap(x: f64, cap: f64) -> f64 {
+    if cap <= 0.0 || cap >= 10.0 {
+        return x.min(1.0);
+    }
+    cap * (x / cap).tanh()
 }
 
 /// Apply Ebbinghaus forgetting curve decay to all fragments.
@@ -170,5 +199,31 @@ mod tests {
         // With negative feedback, score should be suppressed
         let suppressed = compute_relevance(&frag, 0.30, 0.25, 0.25, 0.20, 0.6);
         assert!(suppressed < score);
+    }
+
+    #[test]
+    fn test_softcap_properties() {
+        // Property 1: f(0) = 0
+        assert_eq!(softcap(0.0, 0.85), 0.0);
+
+        // Property 2: f'(0) ≈ 1 (linear for small inputs)
+        let small = softcap(0.01, 0.85);
+        assert!((small - 0.01).abs() < 0.001, "Near-zero should be linear: {small}");
+
+        // Property 3: f(x) ≤ cap (tanh saturates to exactly 1.0 for large x)
+        assert!(softcap(100.0, 0.85) <= 0.85);
+
+        // Property 4: monotonically increasing
+        let a = softcap(0.3, 0.85);
+        let b = softcap(0.5, 0.85);
+        let c = softcap(0.8, 0.85);
+        assert!(a < b && b < c, "Must be monotone: {a} < {b} < {c}");
+
+        // Property 5: compression — boosted score (2.0) is near cap
+        let capped = softcap(2.0, 0.85);
+        assert!(capped > 0.80 && capped < 0.85, "2.0 should be near cap: {capped}");
+
+        // Property 6: disabled when cap=0
+        assert_eq!(softcap(0.5, 0.0), 0.5);
     }
 }

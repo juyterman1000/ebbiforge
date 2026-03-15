@@ -127,6 +127,31 @@ fn diversity_factor(candidate_hash: u64, selected_hashes: &[u64]) -> f64 {
     1.0 - max_sim
 }
 
+/// Compute average pairwise diversity from SimHash fingerprints.
+///
+/// diversity = mean over all pairs of (hamming_distance / 64).
+/// Returns 1.0 when ≤ 1 hash (trivially diverse).
+fn compute_pairwise_diversity(hashes: &[u64]) -> f64 {
+    if hashes.len() <= 1 {
+        return 1.0;
+    }
+    let n = hashes.len();
+    let mut pair_count = 0usize;
+    let mut diversity_sum = 0.0;
+    for i in 0..n {
+        for j in (i + 1)..n {
+            let dist = hamming_distance(hashes[i], hashes[j]);
+            diversity_sum += dist as f64 / 64.0;
+            pair_count += 1;
+        }
+    }
+    if pair_count > 0 {
+        (diversity_sum / pair_count as f64 * 10000.0).round() / 10000.0
+    } else {
+        1.0
+    }
+}
+
 /// IOS: Information-Optimal Selection
 ///
 /// Combines Submodular Diversity Selection with Multi-Resolution Knapsack
@@ -249,6 +274,50 @@ pub fn ios_select(
         };
     }
 
+    // ── Best-Fit Fast Path ──────────────────────────────────────────
+    // Best-fit-decreasing bin packing: when
+    // ALL non-pinned fragments fit at full resolution, skip the
+    // O(N×K) greedy loop. Common for small codebases or generous
+    // ECDB budgets. Reduces to O(N).
+    // ────────────────────────────────────────────────────────────────
+    {
+        let mut full_total: u32 = 0;
+        let mut seen_frag = vec![false; fragments.len()];
+        for c in &candidates {
+            if c.resolution == Resolution::Full && !seen_frag[c.frag_idx] {
+                seen_frag[c.frag_idx] = true;
+                full_total += c.token_cost;
+            }
+        }
+        if full_total <= remaining_budget && full_total > 0 {
+            let mut selections = pinned.clone();
+            let mut fast_tokens = pinned_tokens;
+            let mut fast_value: f64 = selections.iter()
+                .map(|&(i, _)| {
+                    let fm = feedback_mults.get(&fragments[i].fragment_id).copied().unwrap_or(1.0);
+                    compute_relevance(&fragments[i], w_recency, w_frequency, w_semantic, w_entropy, fm)
+                })
+                .sum();
+            let mut fast_hashes: Vec<u64> = pinned_hashes.clone();
+
+            for c in &candidates {
+                if c.resolution == Resolution::Full {
+                    selections.push((c.frag_idx, Resolution::Full));
+                    fast_tokens += c.token_cost;
+                    fast_value += c.base_value;
+                    fast_hashes.push(c.simhash);
+                }
+            }
+
+            return SdsResult {
+                selections,
+                total_tokens: fast_tokens,
+                total_value: (fast_value * 10000.0).round() / 10000.0,
+                diversity_score: compute_pairwise_diversity(&fast_hashes),
+            };
+        }
+    }
+
     // ── Phase 3: Greedy SDS+MRK selection ──
     let mut selected: Vec<(usize, Resolution)> = pinned;
     let mut selected_hashes: Vec<u64> = pinned_hashes;
@@ -340,25 +409,7 @@ pub fn ios_select(
     }
 
     // ── Phase 4: Compute diversity score of final selection ──
-    let diversity_score = if selected_hashes.len() <= 1 {
-        1.0
-    } else {
-        let n = selected_hashes.len();
-        let mut pair_count = 0usize;
-        let mut diversity_sum = 0.0;
-        for i in 0..n {
-            for j in (i + 1)..n {
-                let dist = hamming_distance(selected_hashes[i], selected_hashes[j]);
-                diversity_sum += dist as f64 / 64.0; // Normalize to [0, 1]
-                pair_count += 1;
-            }
-        }
-        if pair_count > 0 {
-            (diversity_sum / pair_count as f64 * 10000.0).round() / 10000.0
-        } else {
-            1.0
-        }
-    };
+    let diversity_score = compute_pairwise_diversity(&selected_hashes);
 
     SdsResult {
         selections: selected,
@@ -557,5 +608,24 @@ mod tests {
         assert!(full_count_big >= full_count_tight,
             "Generous budget should select more full-resolution fragments"
         );
+    }
+
+    #[test]
+    fn test_fast_path_selects_all_when_budget_generous() {
+        // 3 fragments totalling 150 tokens, budget = 500
+        // Should trigger fast path: all selected at full resolution
+        let frags = vec![
+            make_frag("a", "def alpha(): return 1", 50, "a.py"),
+            make_frag("b", "def beta(): return 2", 50, "b.py"),
+            make_frag("c", "def gamma(): return 3", 50, "c.py"),
+        ];
+
+        let result = ios_select(&frags, 500, 0.3, 0.25, 0.25, 0.2,
+            &empty_feedback(), true, false, &default_factors(), DEFAULT_DIV_FLOOR);
+
+        assert_eq!(result.selections.len(), 3, "Fast path should select all 3");
+        assert!(result.selections.iter().all(|s| s.1 == Resolution::Full),
+            "Fast path should use full resolution for all");
+        assert_eq!(result.total_tokens, 150);
     }
 }

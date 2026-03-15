@@ -53,15 +53,111 @@ def context_window_for_model(model: str) -> int:
     return _DEFAULT_CONTEXT_WINDOW
 
 
+# ══════════════════════════════════════════════════════════════════════
+# Single-Dial Quality Profiles
+# ══════════════════════════════════════════════════════════════════════
+#
+# Single-knob control: one `quality` parameter [0, 1] that auto-derives
+# all tuning parameters via Pareto-front interpolation.
+#
+# quality=0.0 → "speed":   minimal budget, aggressive pruning, fast
+# quality=0.5 → "balanced": current defaults
+# quality=1.0 → "quality":  generous budget, full diversity, thorough
+#
+# For each numeric param p:
+#   p(q) = p_speed × (1 - q) + p_quality × q
+#
+# Boolean features are enabled above a threshold:
+#   feature(q) = q >= threshold
+#
+# Profiles are defined as dicts for easy extension and autotune overlay.
+# ══════════════════════════════════════════════════════════════════════
+
+_PROFILE_SPEED = {
+    "context_fraction": 0.08,
+    "ecdb_min_budget": 200,
+    "ecdb_max_fraction": 0.15,
+    "ecdb_sigmoid_steepness": 4.0,    # aggressive budget scaling
+    "ecdb_sigmoid_base": 0.3,
+    "ecdb_sigmoid_range": 1.0,
+    "ecdb_codebase_divisor": 400.0,   # less codebase scaling
+    "ecdb_codebase_cap": 1.5,
+    "ios_skeleton_info_factor": 0.50,  # skeletons carry less info (aggressive)
+    "ios_reference_info_factor": 0.10,
+    "ios_diversity_floor": 0.05,
+    "fisher_scale": 0.45,
+    "trajectory_c_min": 0.5,          # faster convergence
+    "trajectory_lambda": 0.10,
+    "egtc_alpha": 1.2,
+    "egtc_gamma": 1.5,
+    "egtc_epsilon": 0.6,
+    # Thresholds for features (enabled when quality >= threshold)
+    "_thresh_multi_resolution": 0.3,
+    "_thresh_diversity": 0.2,
+    "_thresh_hierarchical": 0.4,
+    "_thresh_ltm": 0.3,
+    "_thresh_trajectory": 0.3,
+}
+
+_PROFILE_QUALITY = {
+    "context_fraction": 0.25,
+    "ecdb_min_budget": 800,
+    "ecdb_max_fraction": 0.45,
+    "ecdb_sigmoid_steepness": 2.0,    # gentler budget scaling
+    "ecdb_sigmoid_base": 0.6,
+    "ecdb_sigmoid_range": 2.0,
+    "ecdb_codebase_divisor": 100.0,   # more codebase scaling
+    "ecdb_codebase_cap": 3.0,
+    "ios_skeleton_info_factor": 0.80,  # skeletons carry more info
+    "ios_reference_info_factor": 0.25,
+    "ios_diversity_floor": 0.15,
+    "fisher_scale": 0.65,
+    "trajectory_c_min": 0.7,          # gentler convergence
+    "trajectory_lambda": 0.05,
+    "egtc_alpha": 2.0,
+    "egtc_gamma": 1.0,
+    "egtc_epsilon": 0.4,
+    "_thresh_multi_resolution": 0.3,
+    "_thresh_diversity": 0.2,
+    "_thresh_hierarchical": 0.4,
+    "_thresh_ltm": 0.3,
+    "_thresh_trajectory": 0.3,
+}
+
+
+def _interpolate_profiles(quality: float) -> dict:
+    """Linearly interpolate between speed and quality profiles."""
+    q = max(0.0, min(1.0, quality))
+    result = {}
+    for key in _PROFILE_SPEED:
+        if key.startswith("_"):
+            continue
+        s = _PROFILE_SPEED[key]
+        qv = _PROFILE_QUALITY[key]
+        if isinstance(s, int) and isinstance(qv, int):
+            result[key] = int(s * (1 - q) + qv * q)
+        else:
+            result[key] = round(float(s) * (1 - q) + float(qv) * q, 6)
+    return result
+
+
 @dataclass
 class ProxyConfig:
-    """Configuration for the entroly prompt compiler proxy."""
+    """Configuration for the entroly prompt compiler proxy.
+
+    Supports two configuration modes:
+      1. Explicit: set each parameter individually via env vars
+      2. Single-dial: set ENTROLY_QUALITY=[0,1] to auto-derive all params
+    """
 
     port: int = 9377
     host: str = "127.0.0.1"
 
     openai_base_url: str = "https://api.openai.com"
     anthropic_base_url: str = "https://api.anthropic.com"
+
+    # Single-dial quality knob: None = use explicit params, 0-1 = auto-derive
+    quality: float | None = None
 
     # Fraction of model context window to use for injected context (0.0-1.0)
     context_fraction: float = 0.15
@@ -96,15 +192,26 @@ class ProxyConfig:
 
     # EGTC v2 coefficients (overridable by autotune daemon via tuning_config.json)
     fisher_scale: float = 0.55
+    egtc_alpha: float = 1.6       # vagueness coefficient
+    egtc_gamma: float = 1.2       # sufficiency coefficient
+    egtc_epsilon: float = 0.5     # dispersion coefficient
     trajectory_c_min: float = 0.6
     trajectory_lambda: float = 0.07
 
     @classmethod
     def from_env(cls) -> ProxyConfig:
-        """Create config from environment variables, with tuning_config.json overlay."""
+        """Create config from environment variables, with tuning_config.json overlay.
+
+        Supports single-dial mode: set ENTROLY_QUALITY=0.0–1.0 to auto-derive
+        all numeric params from Pareto-interpolated profiles.
+        """
+        quality_env = os.environ.get("ENTROLY_QUALITY")
+        quality = float(quality_env) if quality_env else None
+
         config = cls(
             port=int(os.environ.get("ENTROLY_PROXY_PORT", "9377")),
             host=os.environ.get("ENTROLY_PROXY_HOST", "127.0.0.1"),
+            quality=quality,
             openai_base_url=os.environ.get(
                 "ENTROLY_OPENAI_BASE", "https://api.openai.com"
             ),
@@ -130,9 +237,41 @@ class ProxyConfig:
                 os.environ.get("ENTROLY_TRAJECTORY_LAMBDA", "0.07")
             ),
         )
+
+        # Single-dial mode: auto-derive params from quality knob
+        if quality is not None:
+            config._apply_quality_dial(quality)
+
         # Overlay tunable coefficients from tuning_config.json (written by autotune)
         config._load_tuned_coefficients()
         return config
+
+    def _apply_quality_dial(self, quality: float) -> None:
+        """Apply single-dial quality interpolation.
+
+        Derives all numeric tuning parameters from the quality knob
+        via linear interpolation between speed (q=0) and quality (q=1)
+        profiles on the Pareto front of the speed-accuracy tradeoff.
+
+        Boolean features are enabled when quality >= their threshold.
+        """
+        q = max(0.0, min(1.0, quality))
+        params = _interpolate_profiles(q)
+
+        for key, value in params.items():
+            if hasattr(self, key):
+                setattr(self, key, value)
+
+        # Boolean features: enabled above threshold
+        self.enable_ios_multi_resolution = q >= _PROFILE_SPEED.get("_thresh_multi_resolution", 0.3)
+        self.enable_ios_diversity = q >= _PROFILE_SPEED.get("_thresh_diversity", 0.2)
+        self.enable_hierarchical_compression = q >= _PROFILE_SPEED.get("_thresh_hierarchical", 0.4)
+        self.enable_ltm = q >= _PROFILE_SPEED.get("_thresh_ltm", 0.3)
+        self.enable_trajectory_convergence = q >= _PROFILE_SPEED.get("_thresh_trajectory", 0.3)
+
+        logger = logging.getLogger("entroly.proxy")
+        logger.info(f"Single-dial quality={q:.2f}: context_fraction={self.context_fraction:.3f}, "
+                     f"ecdb_min_budget={self.ecdb_min_budget}, diversity={self.enable_ios_diversity}")
 
     def _load_tuned_coefficients(self) -> None:
         """Load tunable coefficients from tuning_config.json if present.
@@ -154,12 +293,16 @@ class ProxyConfig:
         # EGTC coefficients
         egtc = tc.get("egtc", {})
         if egtc:
-            if "fisher_scale" in egtc:
-                self.fisher_scale = float(egtc["fisher_scale"])
-            if "trajectory_c_min" in egtc:
-                self.trajectory_c_min = float(egtc["trajectory_c_min"])
-            if "trajectory_lambda" in egtc:
-                self.trajectory_lambda = float(egtc["trajectory_lambda"])
+            for key, attr in (
+                ("fisher_scale", "fisher_scale"),
+                ("alpha", "egtc_alpha"),
+                ("gamma", "egtc_gamma"),
+                ("epsilon", "egtc_epsilon"),
+                ("trajectory_c_min", "trajectory_c_min"),
+                ("trajectory_lambda", "trajectory_lambda"),
+            ):
+                if key in egtc:
+                    setattr(self, attr, float(egtc[key]))
             logger.debug(f"EGTC coefficients from tuning_config.json: {egtc}")
 
         # IOS coefficients

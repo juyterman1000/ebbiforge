@@ -31,11 +31,47 @@
     "beta": 0.95,
     "initial_residual_lambda": 0.1
   },
+  "ios": {
+    "skeleton_info_factor": 0.7,
+    "reference_info_factor": 0.15,
+    "diversity_floor": 0.1,
+    "_comment": "MRK info retention factors and SDS diversity floor. Tunable by autotune."
+  },
+  "ecdb": {
+    "min_budget": 500,
+    "max_fraction": 0.3,
+    "sigmoid_steepness": 3.0,
+    "sigmoid_base": 0.5,
+    "sigmoid_range": 1.5,
+    "codebase_divisor": 200.0,
+    "codebase_cap": 2.0,
+    "_comment": "Entropy-Calibrated Dynamic Budget parameters. All tunable by autotune."
+  },
+  "egtc": {
+    "alpha": 1.6,
+    "gamma": 1.2,
+    "epsilon": 0.5,
+    "fisher_scale": 0.55,
+    "trajectory_c_min": 0.6,
+    "trajectory_lambda": 0.07
+  },
   "autotuner": {
     "enabled": true,
+    "strategy": "auto",
+    "_strategy_comment": "auto = detect monorepo/single-service automatically. Or: balanced, latency, monorepo, quality",
     "budget_seconds": 10,
+    "time_budget_ms": 500,
+    "_time_budget_comment": "Hard timeout per optimize() call. Configs exceeding this are discarded with score 0.0.",
     "perturbation_scale": 0.05,
     "min_delta_to_keep": 0.001,
-    "recall_window_size": 500
+    "drift_penalty_weight": 0.1,
+    "_drift_comment": "Config drift penalty weight. Higher = stays closer to defaults (prevents config rot).",
+    "idle_only": false,
+    "_idle_comment": "Only tune when system CPU load is below idle_cpu_threshold. Keeps dev machines responsive.",
+    "idle_cpu_threshold": 0.3,
+    "idle_sleep_secs": 5,
+    "recall_window_size": 500,
+    "iteration_sleep_secs": 0.5,
+    "_sleep_comment": "Sleep between iterations. 0.5s keeps CPU load negligible on i5/i7/M-series 16GB machines."
   }
 }

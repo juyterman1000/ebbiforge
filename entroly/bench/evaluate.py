@@ -60,6 +60,8 @@ def create_engine_from_config(config: dict):
     k = config["knapsack"]
     sw = config.get("sliding_window", {})
     at = config.get("autotuner", {})
+    # IOS parameters from tuning config
+    ios = config.get("ios", {})
     return EntrolyEngine(
         w_recency=w["recency"],
         w_frequency=w["frequency"],
@@ -69,7 +71,9 @@ def create_engine_from_config(config: dict):
         min_relevance=d["min_relevance_threshold"],
         hamming_threshold=config["dedup"]["hamming_threshold"],
         exploration_rate=k["exploration_rate"],
-        recall_window_size=int(at.get("recall_window_size", sw.get("recall_window_size", 0))),
+        ios_skeleton_info_factor=ios.get("skeleton_info_factor", 0.70),
+        ios_reference_info_factor=ios.get("reference_info_factor", 0.15),
+        ios_diversity_floor=ios.get("diversity_floor", 0.10),
     )
 
 

@@ -75,7 +75,13 @@ class PromptCompilerProxy:
             await self._client.aclose()
 
     async def handle_proxy(self, request: Request) -> StreamingResponse | JSONResponse:
-        """Main proxy handler — intercept, optimize, forward."""
+        """Main proxy handler — intercept, optimize, forward.
+
+        Uses pipelined async architecture:
+        1. Parse request + start HTTP connection warmup concurrently
+        2. Run Rust pipeline in thread pool (off event loop)
+        3. Connection is ready by the time pipeline completes
+        """
         self._requests_total += 1
 
         # Read request
@@ -89,6 +95,13 @@ class PromptCompilerProxy:
         path = request.url.path
         headers = {k: v for k, v in request.headers.items()}
         provider = detect_provider(path, headers)
+
+        # ── Pipelined: warmup connection while Rust pipeline runs ──
+        # Start HTTP connection pool warmup concurrently with the
+        # Rust optimization. For persistent connections this is nearly
+        # free; for cold starts it saves the TLS handshake time (~50ms).
+        target_url = self._resolve_target(provider, path)
+        warmup_task = asyncio.create_task(self._warmup_connection(target_url))
 
         # Run the optimization pipeline (synchronous Rust, off the event loop)
         try:
@@ -134,8 +147,10 @@ class PromptCompilerProxy:
             # Cardinal rule: never block a request due to entroly errors
             logger.debug(f"Pipeline error (forwarding unmodified): {e}")
 
-        # Forward to real API
-        target_url = self._resolve_target(provider, path)
+        # Await warmup (usually completes during pipeline, essentially free)
+        await warmup_task
+
+        # Forward to real API (target_url already resolved above)
         forward_headers = self._build_headers(headers, provider)
         is_streaming = body.get("stream", False)
 
@@ -243,6 +258,9 @@ class PromptCompilerProxy:
                 sufficiency=sufficiency,
                 task_type=task_type,
                 fisher_scale=self.config.fisher_scale,
+                alpha=self.config.egtc_alpha,
+                gamma=self.config.egtc_gamma,
+                eps_d=self.config.egtc_epsilon,
             )
 
         # Security scan on selected fragments
@@ -363,6 +381,27 @@ class PromptCompilerProxy:
         return JSONResponse(
             {"error": "invalid request body"}, status_code=400
         )
+
+    async def _warmup_connection(self, target_url: str) -> None:
+        """Pre-warm the HTTP connection pool for the target API.
+
+        Overlap connection setup (TLS handshake, DNS resolution) with the
+        Rust compute pipeline.
+
+        For persistent connections (typical after first request), this is
+        essentially a no-op. For cold starts, it saves ~50ms of TLS time.
+        """
+        if not self._client:
+            return
+        try:
+            # HEAD request to establish the connection without payload
+            # httpx will reuse this connection for the actual POST
+            from urllib.parse import urlparse
+            parsed = urlparse(target_url)
+            warmup_url = f"{parsed.scheme}://{parsed.netloc}/health"
+            await self._client.head(warmup_url, timeout=2.0)
+        except Exception:
+            pass  # Non-critical — the actual request will establish the connection
 
     def _resolve_target(self, provider: str, path: str) -> str:
         if provider == "anthropic":

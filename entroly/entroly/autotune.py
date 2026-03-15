@@ -229,9 +229,90 @@ def mutate_config(config: Dict[str, Any]) -> Dict[str, Any]:
     return new_config
 
 
-def composite_score(result: BenchResult) -> float:
-    """Single metric combining efficiency + recall (like val_bpb)."""
-    return 0.6 * result.recall_accuracy + 0.4 * result.context_efficiency * 100
+def composite_score(result: BenchResult, config: Optional[Dict[str, Any]] = None,
+                    defaults: Optional[Dict[str, Any]] = None,
+                    drift_weight: float = 0.1) -> float:
+    """Single metric: efficiency + recall - config drift penalty.
+
+    Adds a drift penalty that penalises configs straying from defaults
+    (prevents adversarial parameter regions).
+
+    composite = 0.6·recall + 0.4·efficiency×100 - drift_weight·drift²×100
+    """
+    base = 0.6 * result.recall_accuracy + 0.4 * result.context_efficiency * 100
+
+    if config is None or defaults is None or drift_weight <= 0:
+        return base
+
+    drift_sq = 0.0
+    count = 0
+    for key, (lo, hi) in TUNABLE_PARAMS.items():
+        if key in config and key in defaults:
+            span = max(float(hi) - float(lo), 1e-9)
+            delta = (float(config[key]) - float(defaults.get(key, config[key]))) / span
+            drift_sq += delta * delta
+            count += 1
+
+    if count > 0:
+        drift = (drift_sq / count) ** 0.5
+        return base - drift_weight * drift * drift * 100
+    return base
+
+
+# ══════════════════════════════════════════════════════════════════════
+# Cautious Parameter Updates — Momentum-Dampened Autotune
+# ══════════════════════════════════════════════════════════════════════
+#
+# Instead of binary keep/discard, three mechanisms:
+#
+# 1. EMA Blending: Instead of full replacement, blend the winning
+#    config with the current best:
+#      p_new = (1 - α) · p_old + α · p_candidate
+#    where α scales with improvement magnitude (big improvement = faster adoption).
+#
+# 2. Polyak Averaging: Maintain a running average of all kept configs.
+#    After tuning completes, the Polyak average is often more robust
+#    than the single best (Polyak & Juditsky, 1992).
+#
+# 3. Config Drift Penalty: The composite score penalises configs that
+#    stray too far from defaults, preventing the autotuner from finding
+#    adversarial parameter regions that overfit the benchmark.
+# ══════════════════════════════════════════════════════════════════════
+
+def _ema_blend(best: Dict[str, Any], candidate: Dict[str, Any],
+               alpha: float) -> Dict[str, Any]:
+    """EMA blend: p = (1-α)·best + α·candidate for numeric params."""
+    blended = dict(best)
+    for key in TUNABLE_PARAMS:
+        if key in candidate and key in best:
+            old_val = float(best[key])
+            new_val = float(candidate[key])
+            val = (1 - alpha) * old_val + alpha * new_val
+            lo, hi = TUNABLE_PARAMS[key]
+            val = max(float(lo), min(float(hi), val))
+            if isinstance(lo, int):
+                blended[key] = int(round(val))
+            else:
+                blended[key] = round(val, 4)
+    return blended
+
+
+def _polyak_update(avg: Dict[str, Any], config: Dict[str, Any],
+                   count: int) -> Dict[str, Any]:
+    """Polyak running average: avg = ((n-1)·avg + config) / n."""
+    updated = dict(avg)
+    for key in TUNABLE_PARAMS:
+        if key in config and key in avg:
+            old_avg = float(avg[key])
+            new_val = float(config[key])
+            val = (old_avg * (count - 1) + new_val) / count
+            lo, hi = TUNABLE_PARAMS[key]
+            val = max(float(lo), min(float(hi), val))
+            if isinstance(lo, int):
+                updated[key] = int(round(val))
+            else:
+                updated[key] = round(val, 4)
+    return updated
 
 
 def log_result(iteration: int, config: Dict[str, Any], result: BenchResult,
@@ -289,10 +370,19 @@ def run_autotune(iterations: int = 100,
 
     best_score = baseline_score
     best_config = dict(config)
+    defaults = dict(config)  # Original config for drift penalty
     improvements = 0
 
-    print(f"\n--- Starting {iterations} experiments ---")
-    print("(NEVER STOP: runs until interrupted or iterations exhausted)\n")
+    # Polyak averaging state
+    polyak_avg = dict(config)
+    polyak_count = 1
+
+    # EMA blending rate: scales with improvement magnitude
+    # Base alpha = 0.3 (cautious). Doubles when improvement > 5% of score.
+    ema_base_alpha = 0.3
+
+    print(f"\n--- Starting {iterations} experiments (cautious updates) ---")
+    print("(EMA blending + Polyak averaging + drift penalty)\n")
 
     for i in range(1, iterations + 1):
         candidate = mutate_config(best_config)
@@ -301,19 +391,30 @@ def run_autotune(iterations: int = 100,
         new_val = candidate.get(mutated_param)
 
         result = evaluate(candidate, cases, time_budget)
-        score = composite_score(result)
+        score = composite_score(result, candidate, defaults)
 
         if score > best_score:
+            # ── Cautious update: EMA blend instead of full replacement ──
+            # Alpha scales with improvement magnitude: big jumps get faster
+            # adoption, small improvements get cautious blending.
+            delta_pct = (score - best_score) / max(best_score, 0.001)
+            alpha = min(1.0, ema_base_alpha * (1.0 + delta_pct * 10.0))
+
             status = "keep"
             improvements += 1
             best_score = score
-            best_config = dict(candidate)
+            best_config = _ema_blend(best_config, candidate, alpha)
             save_config(best_config)
-            marker = ">>>"
+
+            # Update Polyak average
+            polyak_count += 1
+            polyak_avg = _polyak_update(polyak_avg, best_config, polyak_count)
+
+            marker = f">>> α={alpha:.2f}"
         elif (score == best_score and
               result.avg_wall_time_ms < baseline.avg_wall_time_ms):
             status = "keep"
-            best_config = dict(candidate)
+            best_config = _ema_blend(best_config, candidate, ema_base_alpha * 0.5)
             save_config(best_config)
             marker = "  ="
         else:
@@ -328,13 +429,28 @@ def run_autotune(iterations: int = 100,
               f"eff={result.context_efficiency:.6f}) "
               f"| {status:7s} | {description}")
 
+    # ── Final: evaluate Polyak average ──
+    if polyak_count > 2:
+        print(f"\n--- Evaluating Polyak average ({polyak_count} samples) ---")
+        polyak_result = evaluate(polyak_avg, cases, time_budget)
+        polyak_score = composite_score(polyak_result, polyak_avg, defaults)
+        print(f"Polyak score: {polyak_score:.4f} vs best: {best_score:.4f}")
+
+        if polyak_score >= best_score:
+            print("  → Polyak average is at least as good — using it")
+            best_config = polyak_avg
+            best_score = polyak_score
+        else:
+            print("  → Best single config is better — keeping it")
+
     print(f"\n--- Summary ---")
     print(f"Total experiments: {iterations}")
     print(f"Improvements found: {improvements}")
     print(f"Baseline score: {baseline_score:.4f}")
     print(f"Best score: {best_score:.4f}")
-    delta = ((best_score - baseline_score) / max(baseline_score, 0.001)) * 100
-    print(f"Improvement: {delta:.1f}%")
+    delta_final = ((best_score - baseline_score) / max(baseline_score, 0.001)) * 100
+    print(f"Improvement: {delta_final:.1f}%")
+    print(f"Polyak samples: {polyak_count}")
     print(f"\nBest config saved to {CONFIG_PATH}")
     print(f"Full results log: {RESULTS_PATH}")
 
